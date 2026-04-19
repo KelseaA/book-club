@@ -18,7 +18,7 @@ export interface Member {
 export interface MemberSummary {
   id: number;
   name: string;
-  email: string;
+  email?: string; // only present on the logged-in member's own profile, not in list/host contexts
 }
 
 export interface BookOption {

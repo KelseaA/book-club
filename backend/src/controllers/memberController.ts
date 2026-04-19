@@ -66,7 +66,7 @@ export async function updateProfile(req: Request, res: Response) {
 /** List all members (name + id only) for HostSelector component */
 export async function listMembers(_req: Request, res: Response) {
   const members = await prisma.member.findMany({
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
   return res.json(members);

@@ -19,7 +19,7 @@ export async function requireAuth(
   res: Response,
   next: NextFunction,
 ) {
-  const raw = req.cookies?.memberId;
+  const raw = req.signedCookies?.memberId;
   if (!raw) {
     return res.status(401).json({ error: "Not authenticated" });
   }

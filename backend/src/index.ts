@@ -20,7 +20,7 @@ app.use(
   }),
 );
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser(process.env.SESSION_SECRET));
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);

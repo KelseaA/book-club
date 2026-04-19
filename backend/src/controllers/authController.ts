@@ -5,12 +5,13 @@ import { z } from "zod";
 
 const SALT_ROUNDS = 12;
 
-// Cookie options — httpOnly prevents JS access
+// Cookie options — httpOnly prevents JS access, signed prevents tampering
 const cookieOptions = {
   httpOnly: true,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  signed: true,
 };
 
 export const registerSchema = z.object({
