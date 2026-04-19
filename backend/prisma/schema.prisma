@@ -1,0 +1,147 @@
+// Prisma schema for the Book Club app
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MonthStatus {
+  SETUP
+  VOTING
+  FINALIZED
+}
+
+model Member {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  // Address fields for profile purposes
+  streetAddress String?
+  city          String?
+  state         String?
+  zipCode       String?
+  country       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Months this member is hosting
+  hostedMonths  BookClubMonth[] @relation("HostMember")
+  bookVotes     BookVote[]
+  dateSelections DateSelection[]
+}
+
+model BookClubMonth {
+  id          Int         @id @default(autoincrement())
+  // YYYY-MM format, e.g. "2026-04"
+  monthKey    String      @unique
+  status      MonthStatus @default(SETUP)
+
+  hostMemberId Int
+  host         Member @relation("HostMember", fields: [hostMemberId], references: [id])
+
+  // Whether non-host members can see results
+  resultsVisible  Boolean   @default(false)
+  revealedAt      DateTime?
+
+  // Finalization fields
+  finalBookOptionId  Int?
+  finalBookOption    BookOption? @relation("FinalBook", fields: [finalBookOptionId], references: [id])
+  finalMeetingDate   DateTime?
+
+  // Optional snapshot of final rankings stored as plain text for archive display
+  finalResultsSnapshot String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookOptions  BookOption[]  @relation("MonthBooks")
+  dateOptions  DateOption[]
+  bookVotes    BookVote[]
+}
+
+model BookOption {
+  id          Int    @id @default(autoincrement())
+  monthId     Int
+  month       BookClubMonth @relation("MonthBooks", fields: [monthId], references: [id])
+
+  title        String
+  author       String
+  notes        String?
+  genres       String?
+  coverImageUrl String?
+  sourceUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookVoteRanks BookVoteRank[]
+  // Used when this book is the final winner
+  finalForMonths BookClubMonth[] @relation("FinalBook")
+}
+
+// One BookVote per member per month — represents their ranked ballot
+model BookVote {
+  id      Int @id @default(autoincrement())
+  monthId Int
+  month   BookClubMonth @relation(fields: [monthId], references: [id])
+  memberId Int
+  member  Member @relation(fields: [memberId], references: [id])
+
+  submittedAt DateTime @default(now())
+
+  // Normalized ranked choices: one row per book option
+  ranks BookVoteRank[]
+
+  @@unique([monthId, memberId]) // one ballot per member per month
+}
+
+// Each row represents one rank for one book in a ballot
+// rank=1 is first choice, rank=2 is second, etc.
+model BookVoteRank {
+  id         Int @id @default(autoincrement())
+  bookVoteId Int
+  bookVote   BookVote @relation(fields: [bookVoteId], references: [id])
+
+  bookOptionId Int
+  bookOption   BookOption @relation(fields: [bookOptionId], references: [id])
+
+  rank Int // 1 = top choice
+
+  @@unique([bookVoteId, bookOptionId])
+  @@unique([bookVoteId, rank])
+}
+
+model DateOption {
+  id      Int @id @default(autoincrement())
+  monthId Int
+  month   BookClubMonth @relation(fields: [monthId], references: [id])
+
+  date     DateTime
+  label    String?
+
+  createdAt DateTime @default(now())
+
+  dateSelections DateSelection[]
+}
+
+// One DateSelection row per member per date option they are available for.
+// Members submit all their date selections in a single "action" — tracked by
+// the unique composite on (monthId, memberId) existing in at least one row.
+model DateSelection {
+  id           Int @id @default(autoincrement())
+  dateOptionId Int
+  dateOption   DateOption @relation(fields: [dateOptionId], references: [id])
+
+  memberId Int
+  member   Member @relation(fields: [memberId], references: [id])
+
+  submittedAt DateTime @default(now())
+
+  @@unique([dateOptionId, memberId])
+}
