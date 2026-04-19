@@ -66,31 +66,6 @@ export default function ArchiveDetailPage() {
         </div>
       )}
 
-      {/* All proposals */}
-      <div className="card">
-        <h2 className="font-semibold mb-3">All Proposed Books</h2>
-        <div className="space-y-2">
-          {month.bookOptions.map((b) => (
-            <div
-              key={b.id}
-              className={`flex items-center gap-3 p-2 rounded-lg ${b.id === month.finalBookOptionId ? "bg-brand-50 border border-brand-200" : "bg-gray-50"}`}
-            >
-              {b.coverImageUrl && (
-                <img
-                  src={b.coverImageUrl}
-                  alt=""
-                  className="w-8 h-12 object-cover rounded"
-                />
-              )}
-              <div>
-                <p className="text-sm font-medium">{b.title}</p>
-                <p className="text-xs text-gray-500">{b.author}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Book rankings */}
       {bookResultsData && (
         <div className="card">
