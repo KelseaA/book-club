@@ -71,3 +71,39 @@ export async function listMembers(_req: Request, res: Response) {
   });
   return res.json(members);
 }
+
+/** Permanently delete the authenticated member's account */
+export async function deleteAccount(req: Request, res: Response) {
+  const memberId = req.memberId!;
+
+  // Block if the member is host on any active (non-finalized) month
+  const activeHostedMonth = await prisma.bookClubMonth.findFirst({
+    where: { hostMemberId: memberId, status: { not: "FINALIZED" } },
+    select: { monthKey: true },
+  });
+  if (activeHostedMonth) {
+    return res.status(400).json({
+      error:
+        "You are the host for an active month. Transfer the host role before deleting your account.",
+    });
+  }
+
+  // Delete votes, then the member, in a transaction
+  await prisma.$transaction(async (tx) => {
+    // Delete book vote ranks first (child of BookVote)
+    const bookVotes = await tx.bookVote.findMany({
+      where: { memberId },
+      select: { id: true },
+    });
+    const bookVoteIds = bookVotes.map((v) => v.id);
+    await tx.bookVoteRank.deleteMany({
+      where: { bookVoteId: { in: bookVoteIds } },
+    });
+    await tx.bookVote.deleteMany({ where: { memberId } });
+    await tx.dateSelection.deleteMany({ where: { memberId } });
+    await tx.member.delete({ where: { id: memberId } });
+  });
+
+  res.clearCookie("memberId");
+  return res.json({ ok: true });
+}

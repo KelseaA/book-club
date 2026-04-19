@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 import type { Member } from "../types";
@@ -18,6 +20,8 @@ interface FormValues {
 export default function ProfilePage() {
   const { member } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const {
     register,
@@ -65,6 +69,14 @@ export default function ProfilePage() {
         currentPassword: "",
         newPassword: "",
       });
+    },
+  });
+
+  const deleteAccount = useMutation<void, Error>({
+    mutationFn: () => api.delete("/members/me"),
+    onSuccess: () => {
+      qc.clear();
+      navigate("/login");
     },
   });
 
@@ -154,6 +166,49 @@ export default function ProfilePage() {
             {update.isPending ? "Saving…" : "Save Profile"}
           </button>
         </form>
+      </div>
+
+      {/* Danger zone */}
+      <div className="card border-red-200 mt-6">
+        <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wide mb-3">
+          Danger Zone
+        </h2>
+        {confirmDelete ? (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700">
+              This will permanently delete your account and all your votes. This
+              cannot be undone.
+            </p>
+            {deleteAccount.isError && (
+              <p className="error-text">{deleteAccount.error.message}</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                className="btn-primary bg-red-600 hover:bg-red-700 border-red-600"
+                onClick={() => deleteAccount.mutate()}
+                disabled={deleteAccount.isPending}
+              >
+                {deleteAccount.isPending
+                  ? "Deleting…"
+                  : "Yes, delete my account"}
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleteAccount.isPending}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className="text-sm text-red-600 hover:underline"
+            onClick={() => setConfirmDelete(true)}
+          >
+            Delete my account
+          </button>
+        )}
       </div>
     </div>
   );
