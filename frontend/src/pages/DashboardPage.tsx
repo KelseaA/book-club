@@ -120,6 +120,31 @@ export default function DashboardPage() {
         {!isFinalized && <HostSelector month={month} />}
       </div>
 
+      {/* Finalized banner */}
+      {isFinalized && month.finalBookOption && (
+        <section className="card border-brand-300 bg-brand-50">
+          <h2 className="text-lg font-semibold text-brand-700 mb-3">
+            Month Finalized!
+          </h2>
+          <p className="text-sm text-brand-600">
+            <strong>Book:</strong> {month.finalBookOption.title} by{" "}
+            {month.finalBookOption.author}
+          </p>
+          {month.finalMeetingDate && (
+            <p className="text-sm text-brand-600 mt-1">
+              <strong>Meeting:</strong>{" "}
+              {new Date(month.finalMeetingDate).toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </p>
+          )}
+        </section>
+      )}
+
       {/* ── Book Proposals ──────────────────────────────────────────────────── */}
       <section className="card space-y-4">
         <div className="flex items-center justify-between">
@@ -456,31 +481,6 @@ export default function DashboardPage() {
             <div className="pt-2 border-t border-gray-200">
               <FinalizeMonthButton month={month} />
             </div>
-          )}
-        </section>
-      )}
-
-      {/* Finalized banner */}
-      {isFinalized && month.finalBookOption && (
-        <section className="card border-brand-300 bg-brand-50">
-          <h2 className="text-lg font-semibold text-brand-700 mb-3">
-            Month Finalized!
-          </h2>
-          <p className="text-sm text-brand-600">
-            <strong>Book:</strong> {month.finalBookOption.title} by{" "}
-            {month.finalBookOption.author}
-          </p>
-          {month.finalMeetingDate && (
-            <p className="text-sm text-brand-600 mt-1">
-              <strong>Meeting:</strong>{" "}
-              {new Date(month.finalMeetingDate).toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </p>
           )}
         </section>
       )}

@@ -7,6 +7,7 @@ import DashboardPage from "./pages/DashboardPage";
 import ArchiveListPage from "./pages/ArchiveListPage";
 import ArchiveDetailPage from "./pages/ArchiveDetailPage";
 import ProfilePage from "./pages/ProfilePage";
+import HelpPage from "./pages/HelpPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { member, isLoading } = useAuth();
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="archive" element={<ArchiveListPage />} />
           <Route path="archive/:monthKey" element={<ArchiveDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="help" element={<HelpPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

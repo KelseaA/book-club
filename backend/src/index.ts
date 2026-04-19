@@ -8,6 +8,7 @@ import bookOptionRoutes from "./routes/bookOptions";
 import dateOptionRoutes from "./routes/dateOptions";
 import voteRoutes from "./routes/votes";
 import metadataRoutes from "./routes/metadata";
+import feedbackRoutes from "./routes/feedback";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,7 @@ app.use("/api/months", bookOptionRoutes); // /api/months/:monthKey/books
 app.use("/api/months", dateOptionRoutes); // /api/months/:monthKey/dates
 app.use("/api/months", voteRoutes); // /api/months/:monthKey/votes
 app.use("/api/metadata", metadataRoutes); // /api/metadata/fetch
+app.use("/api/feedback", feedbackRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

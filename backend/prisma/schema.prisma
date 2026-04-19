@@ -34,6 +34,7 @@ model Member {
   hostedMonths  BookClubMonth[] @relation("HostMember")
   bookVotes     BookVote[]
   dateSelections DateSelection[]
+  feedback      Feedback[]
 }
 
 model BookClubMonth {
@@ -144,4 +145,12 @@ model DateSelection {
   submittedAt DateTime @default(now())
 
   @@unique([dateOptionId, memberId])
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
 }
