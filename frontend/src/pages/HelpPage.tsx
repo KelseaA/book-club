@@ -9,36 +9,40 @@ interface Step {
 
 const steps: Step[] = [
   {
-    title: "Signing in",
-    body: "Use the email address and password you registered with to log in. If you ever forget your password, ask whoever set up your account to reset it for you.",
+    title: "This Month page",
+    body: "Your home base. The host sets up book proposals and possible meeting dates here, then opens voting when ready. Everything for the current month happens on this one screen.",
   },
   {
-    title: "This Month page",
-    body: "This is your home base. Every month the club host sets up a new page here with book suggestions and possible meeting dates. Everything happens on this one screen — no need to go anywhere else during the month.",
+    title: "The host role",
+    body: "Any member can reassign the host using the selector at the top of This Month page. The host is the only person who can add, edit, or remove book proposals and dates, and they're the ones who open voting, reveal results, and finalize the month.",
   },
   {
     title: "Book Proposals",
-    body: "The host adds books for the group to consider. You'll see the title, author, and sometimes a cover photo. If a title is a purple link, you can click it to read more about the book on the web.",
+    body: 'The host can add up to 5 books for the group to consider. Click "+ Add Book" and start typing a title — suggestions from Open Library appear automatically. Selecting one fills in the author, cover image, and genres for you. You can also fill everything in manually or leave any field blank. Titles with a link can be clicked to read more about the book. The host can edit any proposal or remove it (as long as no one has voted yet).',
   },
   {
     title: "Meeting Dates",
-    body: "The host also adds a few possible dates for your meetup. Your job is to tick the ones you're free on so the group can find the best day for everyone.",
+    body: "The host adds a few possible dates for the meetup. Like books, dates can be edited or removed before voting opens.",
+  },
+  {
+    title: "Opening Voting",
+    body: 'Once the host is happy with the proposals, they click "Open Voting for All Members." After that, no more changes to books or dates can be made and every member can submit their ballot.',
   },
   {
     title: "Voting",
-    body: 'When the host opens voting you\'ll see a "Your Vote" section. Drag the books into your preferred order (favourite at the top) and tick all the dates you can make. Hit "Submit Vote" when you\'re done — you won\'t be able to change it afterwards, so take your time.',
+    body: 'In the "Your Vote" section, drag the books into your preferred order (favourite at the top) and tick all the dates you\'re available. Hit "Submit Vote" when you\'re done — your vote is locked after submission and cannot be changed.',
   },
   {
     title: "Results",
-    body: "Once the host is ready, they'll announce the winner. You'll see how the group ranked the books and which date had the most takers, plus a banner at the top showing the chosen book and meeting time.",
+    body: 'The host can see results as votes come in. When they\'re ready to share, they click "Reveal Results" to make them visible to everyone. Results show how the group ranked each book and which dates had the most availability. The host then picks the winning book and meeting date to finalize the month.',
   },
   {
     title: "Archive",
-    body: "Every past month lives in the Archive, accessible from the top menu. You can look back at previous picks and results any time.",
+    body: "Every past month lives in the Archive, accessible from the top menu. You can browse previous picks, results, and meeting details any time.",
   },
   {
     title: "Your Profile",
-    body: "Click your name in the top menu to update your display name, mailing address, or password. Your address is shown to other members on the home page when you are the host.",
+    body: "Click your name in the top menu to update your display name, home address, or password. Your address is shown to other members on the dashboard when you are the host for that month.",
   },
 ];
 

@@ -19,6 +19,11 @@ export interface MemberSummary {
   id: number;
   name: string;
   email?: string; // only present on the logged-in member's own profile, not in list/host contexts
+  streetAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  country?: string | null;
 }
 
 export interface BookOption {
@@ -57,6 +62,7 @@ export interface BookClubMonth {
   dateOptions: DateOption[];
   createdAt: string;
   updatedAt: string;
+  _count: { bookVotes: number };
 }
 
 export interface BookVoteRankRow {
@@ -78,6 +84,8 @@ export interface BookResult {
   author: string;
   notes?: string | null;
   coverImageUrl?: string | null;
+  sourceUrl?: string | null;
+  genres?: string | null;
   bordaPoints: number;
 }
 

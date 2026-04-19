@@ -86,6 +86,27 @@ export async function setHost(req: Request, res: Response) {
   return res.json(updated);
 }
 
+/** Host opens voting, advancing month from SETUP → VOTING */
+export async function openVoting(req: Request, res: Response) {
+  const { monthKey } = req.params;
+  const month = await prisma.bookClubMonth.findUnique({ where: { monthKey } });
+  if (!month) return res.status(404).json({ error: "Month not found" });
+  if (month.hostMemberId !== req.memberId) {
+    return res.status(403).json({ error: "Only the host can open voting" });
+  }
+  if (month.status !== "SETUP") {
+    return res
+      .status(400)
+      .json({ error: "Voting is already open or month is finalized" });
+  }
+  const updated = await prisma.bookClubMonth.update({
+    where: { monthKey },
+    data: { status: "VOTING" },
+    include: monthIncludes(),
+  });
+  return res.json(updated);
+}
+
 /** Host reveals results to all members */
 export async function revealResults(req: Request, res: Response) {
   const { monthKey } = req.params;
@@ -152,9 +173,20 @@ export async function finalizeMonth(req: Request, res: Response) {
 
 function monthIncludes() {
   return {
-    host: { select: { id: true, name: true } },
+    host: {
+      select: {
+        id: true,
+        name: true,
+        streetAddress: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+      },
+    },
     bookOptions: { orderBy: { id: "asc" as const } },
     dateOptions: { orderBy: { date: "asc" as const } },
     finalBookOption: true,
+    _count: { select: { bookVotes: true } },
   };
 }

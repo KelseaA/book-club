@@ -1,26 +1,5 @@
 import { Request, Response } from "express";
-import { fetchBookMetadata } from "../utils/fetchBookMetadata";
-import { z } from "zod";
 import fetch from "node-fetch";
-
-export const fetchMetadataSchema = z.object({
-  url: z.string().url(),
-});
-
-/** POST /api/metadata/fetch — accepts { url } and returns best-effort book metadata */
-export async function fetchMetadata(req: Request, res: Response) {
-  const { url } = req.body as { url: string };
-  try {
-    const metadata = await fetchBookMetadata(url);
-    return res.json(metadata);
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to fetch metadata";
-    return res
-      .status(422)
-      .json({ error: message, partial: { sourceUrl: url } });
-  }
-}
 
 /** GET /api/metadata/books-search?q=... — proxies Open Library search API */
 export async function searchBooks(req: Request, res: Response) {

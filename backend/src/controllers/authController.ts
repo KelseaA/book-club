@@ -100,12 +100,14 @@ function publicMember(m: {
   id: number;
   name: string;
   email: string;
+  passwordHash?: string;
   streetAddress: string | null;
   city: string | null;
   state: string | null;
   zipCode: string | null;
   country: string | null;
+  [key: string]: unknown;
 }) {
-  const { ...safe } = m;
+  const { passwordHash: _pw, ...safe } = m;
   return safe;
 }

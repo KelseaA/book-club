@@ -36,6 +36,9 @@ export async function submitBookVote(req: Request, res: Response) {
     include: { bookOptions: true },
   });
   if (!month) return res.status(404).json({ error: "Month not found" });
+  if (month.status === "SETUP") {
+    return res.status(400).json({ error: "Voting has not been opened yet" });
+  }
   if (month.status === FINALIZED) {
     return res
       .status(400)
@@ -47,22 +50,18 @@ export async function submitBookVote(req: Request, res: Response) {
     where: { monthId_memberId: { monthId: month.id, memberId: req.memberId! } },
   });
   if (existing) {
-    return res
-      .status(409)
-      .json({
-        error: "You have already submitted your book ballot for this month",
-      });
+    return res.status(409).json({
+      error: "You have already submitted your book ballot for this month",
+    });
   }
 
   // Validate that all bookOptionIds belong to this month
   const validIds = new Set(month.bookOptions.map((b: { id: number }) => b.id));
   for (const r of ranks) {
     if (!validIds.has(r.bookOptionId)) {
-      return res
-        .status(400)
-        .json({
-          error: `bookOptionId ${r.bookOptionId} does not belong to this month`,
-        });
+      return res.status(400).json({
+        error: `bookOptionId ${r.bookOptionId} does not belong to this month`,
+      });
     }
   }
 
@@ -95,6 +94,9 @@ export async function submitDateVote(req: Request, res: Response) {
     include: { dateOptions: true },
   });
   if (!month) return res.status(404).json({ error: "Month not found" });
+  if (month.status === "SETUP") {
+    return res.status(400).json({ error: "Voting has not been opened yet" });
+  }
   if (month.status === FINALIZED) {
     return res
       .status(400)
@@ -110,12 +112,9 @@ export async function submitDateVote(req: Request, res: Response) {
     },
   });
   if (existingSelections.length > 0) {
-    return res
-      .status(409)
-      .json({
-        error:
-          "You have already submitted your date availability for this month",
-      });
+    return res.status(409).json({
+      error: "You have already submitted your date availability for this month",
+    });
   }
 
   // Validate dateOptionIds belong to this month

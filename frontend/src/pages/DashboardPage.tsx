@@ -8,6 +8,7 @@ import {
   useDeleteDate,
   useSubmitBookVote,
   useSubmitDateVote,
+  useOpenVoting,
 } from "../hooks/useBookClub";
 import { useAuth } from "../hooks/useAuth";
 import MonthStatusBadge from "../components/MonthStatusBadge";
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const deleteDate = useDeleteDate(month?.monthKey ?? "");
   const submitBookVote = useSubmitBookVote(month?.monthKey ?? "");
   const submitDateVote = useSubmitDateVote(month?.monthKey ?? "");
+  const openVotingMutation = useOpenVoting(month?.monthKey ?? "");
 
   const canSeeResults = month
     ? month.resultsVisible || month.hostMemberId === member?.id
@@ -77,6 +79,8 @@ export default function DashboardPage() {
 
   const isHost = member?.id === month.hostMemberId;
   const isFinalized = month.status === "FINALIZED";
+  const isSetup = month.status === "SETUP";
+  const hasVotes = month._count.bookVotes > 0;
 
   const isPendingVote = submitBookVote.isPending || submitDateVote.isPending;
   const voteError = submitBookVote.error || submitDateVote.error;
@@ -142,249 +146,301 @@ export default function DashboardPage() {
               })}
             </p>
           )}
+          {/* Host address — only shown if the host has filled it in */}
+          {(month.host.streetAddress || month.host.city) && (
+            <p className="text-sm text-brand-600 mt-1">
+              <strong>Location:</strong>{" "}
+              {[month.host.streetAddress, month.host.city, month.host.zipCode]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ── Open Voting trigger (SETUP phase) ──────────────────────────── */}
+      {isSetup && month.bookOptions.length >= 1 && (
+        <section className="card space-y-3">
+          {isHost ? (
+            <>
+              <div>
+                <h2 className="text-lg font-semibold">Open Voting</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Once you're happy with the book proposals and dates, open
+                  voting so all members can submit their ballots.
+                </p>
+              </div>
+              {openVotingMutation.error && (
+                <p className="error-text">
+                  {(openVotingMutation.error as Error).message}
+                </p>
+              )}
+              <button
+                className="btn-primary"
+                onClick={() => openVotingMutation.mutate(undefined)}
+                disabled={openVotingMutation.isPending}
+              >
+                {openVotingMutation.isPending
+                  ? "Opening…"
+                  : "Open Voting for All Members"}
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Voting hasn't started yet. The host will open voting once the
+              proposals are ready.
+            </p>
+          )}
         </section>
       )}
 
       {/* ── Book Proposals ──────────────────────────────────────────────────── */}
-      <section className="card space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Book Proposals</h2>
-          {isHost &&
-            !isFinalized &&
-            month.bookOptions.length < 5 &&
-            bookFormMode === "none" && (
-              <button
-                className="btn-secondary text-sm"
-                onClick={() => setBookFormMode("add")}
-              >
-                + Add Book
-              </button>
-            )}
-        </div>
+      {!isFinalized && (
+        <section className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Book Proposals</h2>
+            {isHost &&
+              !isFinalized &&
+              !hasVotes &&
+              month.bookOptions.length < 5 &&
+              bookFormMode === "none" && (
+                <button
+                  className="btn-secondary text-sm"
+                  onClick={() => setBookFormMode("add")}
+                >
+                  + Add Book
+                </button>
+              )}
+          </div>
 
-        {/* Existing books */}
-        {month.bookOptions.length === 0 && (
-          <p className="text-gray-400 text-sm">No books proposed yet.</p>
-        )}
-        <div className="space-y-2">
-          {month.bookOptions.map((book) => (
-            <div key={book.id}>
-              {editingBook?.id === book.id ? (
-                <div className="p-3 border rounded-lg bg-gray-50">
-                  <BookProposalForm
-                    monthKey={month.monthKey}
-                    book={book}
-                    onDone={() => setEditingBook(null)}
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  {book.coverImageUrl && (
-                    <img
-                      src={book.coverImageUrl}
-                      alt=""
-                      className="w-10 h-14 object-cover rounded shadow-sm"
+          {/* Existing books */}
+          {month.bookOptions.length === 0 && (
+            <p className="text-gray-400 text-sm">No books proposed yet.</p>
+          )}
+          <div className="space-y-2">
+            {month.bookOptions.map((book) => (
+              <div key={book.id}>
+                {editingBook?.id === book.id ? (
+                  <div className="p-3 border rounded-lg bg-gray-50">
+                    <BookProposalForm
+                      monthKey={month.monthKey}
+                      book={book}
+                      onDone={() => setEditingBook(null)}
                     />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    {book.sourceUrl ? (
-                      <a
-                        href={book.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-sm truncate text-brand-600 hover:underline block"
-                      >
-                        {book.title}
-                      </a>
-                    ) : (
-                      <p className="font-medium text-sm truncate">
-                        {book.title}
-                      </p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    {book.coverImageUrl && (
+                      <img
+                        src={book.coverImageUrl}
+                        alt=""
+                        className="w-10 h-14 object-cover rounded shadow-sm"
+                      />
                     )}
-                    <p className="text-xs text-gray-500">{book.author}</p>
-                    {book.genres && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {book.genres
-                          .split(",")
-                          .map((g) => g.trim())
-                          .filter(Boolean)
-                          .map((g) => (
-                            <span
-                              key={g}
-                              className="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-xs rounded-full"
+                    <div className="flex-1 min-w-0">
+                      {book.sourceUrl ? (
+                        <a
+                          href={book.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-sm truncate text-brand-600 hover:underline block"
+                        >
+                          {book.title}
+                        </a>
+                      ) : (
+                        <p className="font-medium text-sm truncate">
+                          {book.title}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">{book.author}</p>
+                      {book.genres && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {book.genres
+                            .split(",")
+                            .map((g) => g.trim())
+                            .filter(Boolean)
+                            .map((g) => (
+                              <span
+                                key={g}
+                                className="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-xs rounded-full"
+                              >
+                                {g}
+                              </span>
+                            ))}
+                        </div>
+                      )}
+                      {book.notes && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {book.notes}
+                        </p>
+                      )}
+                    </div>
+                    {isHost && !isFinalized && (
+                      <div className="flex gap-2 shrink-0">
+                        {!hasVotes && confirmDeleteBookId === book.id ? (
+                          <>
+                            <button
+                              className="text-xs text-red-600 font-medium hover:underline"
+                              onClick={() => {
+                                deleteBook.mutate(book.id);
+                                setConfirmDeleteBookId(null);
+                              }}
                             >
-                              {g}
-                            </span>
-                          ))}
+                              Confirm
+                            </button>
+                            <button
+                              className="text-xs text-gray-500 hover:underline"
+                              onClick={() => setConfirmDeleteBookId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="text-xs text-brand-600 hover:underline"
+                              onClick={() => {
+                                setEditingBook(book);
+                                setBookFormMode("none");
+                              }}
+                            >
+                              Edit
+                            </button>
+                            {!hasVotes && (
+                              <button
+                                className="text-xs text-red-500 hover:underline"
+                                onClick={() => setConfirmDeleteBookId(book.id)}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
-                    {book.notes && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {book.notes}
-                      </p>
-                    )}
                   </div>
-                  {isHost && !isFinalized && (
-                    <div className="flex gap-2 shrink-0">
-                      {confirmDeleteBookId === book.id ? (
-                        <>
-                          <button
-                            className="text-xs text-red-600 font-medium hover:underline"
-                            onClick={() => {
-                              deleteBook.mutate(book.id);
-                              setConfirmDeleteBookId(null);
-                            }}
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            className="text-xs text-gray-500 hover:underline"
-                            onClick={() => setConfirmDeleteBookId(null)}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="text-xs text-brand-600 hover:underline"
-                            onClick={() => {
-                              setEditingBook(book);
-                              setBookFormMode("none");
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="text-xs text-red-500 hover:underline"
-                            onClick={() => setConfirmDeleteBookId(book.id)}
-                          >
-                            Remove
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Add book form */}
-        {bookFormMode === "add" && editingBook === null && (
-          <div className="p-4 border rounded-lg bg-gray-50">
-            <BookProposalForm
-              monthKey={month.monthKey}
-              onDone={() => setBookFormMode("none")}
-            />
+                )}
+              </div>
+            ))}
           </div>
-        )}
-      </section>
+
+          {/* Add book form */}
+          {bookFormMode === "add" && editingBook === null && (
+            <div className="p-4 border rounded-lg bg-gray-50">
+              <BookProposalForm
+                monthKey={month.monthKey}
+                onDone={() => setBookFormMode("none")}
+              />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Date Proposals ──────────────────────────────────────────────────── */}
-      <section className="card space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Meeting Dates</h2>
-          {isHost &&
-            !isFinalized &&
-            month.dateOptions.length < 4 &&
-            dateFormMode === "none" && (
-              <button
-                className="btn-secondary text-sm"
-                onClick={() => setDateFormMode("add")}
-              >
-                + Add Date
-              </button>
-            )}
-        </div>
+      {!isFinalized && (
+        <section className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Meeting Dates</h2>
+            {isHost &&
+              !isFinalized &&
+              month.dateOptions.length < 4 &&
+              dateFormMode === "none" && (
+                <button
+                  className="btn-secondary text-sm"
+                  onClick={() => setDateFormMode("add")}
+                >
+                  + Add Date
+                </button>
+              )}
+          </div>
 
-        {month.dateOptions.length === 0 && (
-          <p className="text-gray-400 text-sm">No dates proposed yet.</p>
-        )}
-        <div className="space-y-2">
-          {month.dateOptions.map((d) => (
-            <div key={d.id}>
-              {editingDate?.id === d.id ? (
-                <div className="p-3 border rounded-lg bg-gray-50">
-                  <DateProposalForm
-                    monthKey={month.monthKey}
-                    dateOption={d}
-                    onDone={() => setEditingDate(null)}
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {new Date(d.date).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    {d.label && (
-                      <p className="text-xs text-gray-400">{d.label}</p>
-                    )}
+          {month.dateOptions.length === 0 && (
+            <p className="text-gray-400 text-sm">No dates proposed yet.</p>
+          )}
+          <div className="space-y-2">
+            {month.dateOptions.map((d) => (
+              <div key={d.id}>
+                {editingDate?.id === d.id ? (
+                  <div className="p-3 border rounded-lg bg-gray-50">
+                    <DateProposalForm
+                      monthKey={month.monthKey}
+                      dateOption={d}
+                      onDone={() => setEditingDate(null)}
+                    />
                   </div>
-                  {isHost && !isFinalized && (
-                    <div className="flex gap-2">
-                      {confirmDeleteDateId === d.id ? (
-                        <>
-                          <button
-                            className="text-xs text-red-600 font-medium hover:underline"
-                            onClick={() => {
-                              deleteDate.mutate(d.id);
-                              setConfirmDeleteDateId(null);
-                            }}
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            className="text-xs text-gray-500 hover:underline"
-                            onClick={() => setConfirmDeleteDateId(null)}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="text-xs text-brand-600 hover:underline"
-                            onClick={() => setEditingDate(d)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="text-xs text-red-500 hover:underline"
-                            onClick={() => setConfirmDeleteDateId(d.id)}
-                          >
-                            Remove
-                          </button>
-                        </>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {new Date(d.date).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      {d.label && (
+                        <p className="text-xs text-gray-400">{d.label}</p>
                       )}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {dateFormMode === "add" && editingDate === null && (
-          <div className="p-4 border rounded-lg bg-gray-50">
-            <DateProposalForm
-              monthKey={month.monthKey}
-              onDone={() => setDateFormMode("none")}
-            />
+                    {isHost && !isFinalized && (
+                      <div className="flex gap-2">
+                        {confirmDeleteDateId === d.id ? (
+                          <>
+                            <button
+                              className="text-xs text-red-600 font-medium hover:underline"
+                              onClick={() => {
+                                deleteDate.mutate(d.id);
+                                setConfirmDeleteDateId(null);
+                              }}
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              className="text-xs text-gray-500 hover:underline"
+                              onClick={() => setConfirmDeleteDateId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="text-xs text-brand-600 hover:underline"
+                              onClick={() => setEditingDate(d)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="text-xs text-red-500 hover:underline"
+                              onClick={() => setConfirmDeleteDateId(d.id)}
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        )}
-      </section>
+
+          {dateFormMode === "add" && editingDate === null && (
+            <div className="p-4 border rounded-lg bg-gray-50">
+              <DateProposalForm
+                monthKey={month.monthKey}
+                onDone={() => setDateFormMode("none")}
+              />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Voting ────────────────────────────────────────────────────────── */}
-      {!isFinalized && month.bookOptions.length > 0 && (
+      {!isSetup && !isFinalized && month.bookOptions.length > 0 && (
         <section className="card space-y-4">
           <h2 className="text-lg font-semibold">Your Vote</h2>
 
@@ -464,7 +520,7 @@ export default function DashboardPage() {
           {bookResultsData && (
             <div>
               <h3 className="text-sm font-semibold text-gray-600 mb-2">
-                Book Rankings (Borda Count)
+                Book Rankings
               </h3>
               <BookResults data={bookResultsData} />
             </div>

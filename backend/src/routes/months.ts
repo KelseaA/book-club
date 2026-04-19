@@ -4,6 +4,7 @@ import {
   getMonthByKey,
   listMonths,
   setHost,
+  openVoting,
   revealResults,
   finalizeMonth,
   setHostSchema,
@@ -29,6 +30,7 @@ router.get("/:monthKey", getMonthByKey);
 router.put("/:monthKey/host", validate(setHostSchema), setHost);
 
 // Host-only actions
+router.post("/:monthKey/open-voting", openVoting);
 router.post("/:monthKey/reveal", revealResults);
 router.post("/:monthKey/finalize", validate(finalizeSchema), finalizeMonth);
 

@@ -19,10 +19,14 @@ async function getMonthAndAssertHost(
   monthKey: string,
   memberId: number,
   res: Response,
+  opts: { blockIfVoted?: boolean } = {},
 ) {
   const month = await prisma.bookClubMonth.findUnique({
     where: { monthKey },
-    include: { bookOptions: true },
+    include: {
+      bookOptions: true,
+      _count: { select: { bookVotes: true } },
+    },
   });
   if (!month) {
     res.status(404).json({ error: "Month not found" });
@@ -36,12 +40,20 @@ async function getMonthAndAssertHost(
     res.status(400).json({ error: "Month is finalized" });
     return null;
   }
+  if (opts.blockIfVoted && month._count.bookVotes > 0) {
+    res.status(400).json({
+      error: "Votes have already been cast — book list cannot be changed",
+    });
+    return null;
+  }
   return month;
 }
 
 export async function addBook(req: Request, res: Response) {
   const { monthKey } = req.params;
-  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res);
+  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res, {
+    blockIfVoted: true,
+  });
   if (!month) return;
 
   if (month.bookOptions.length >= MAX_BOOKS) {
@@ -67,7 +79,9 @@ export async function addBook(req: Request, res: Response) {
 
 export async function updateBook(req: Request, res: Response) {
   const { monthKey, bookId } = req.params;
-  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res);
+  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res, {
+    blockIfVoted: true,
+  });
   if (!month) return;
 
   const book = month.bookOptions.find(
@@ -92,7 +106,9 @@ export async function updateBook(req: Request, res: Response) {
 
 export async function deleteBook(req: Request, res: Response) {
   const { monthKey, bookId } = req.params;
-  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res);
+  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res, {
+    blockIfVoted: true,
+  });
   if (!month) return;
 
   const book = month.bookOptions.find(

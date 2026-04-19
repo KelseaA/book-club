@@ -12,7 +12,7 @@ interface FormValues {
   sourceUrl: string;
 }
 
-interface GoogleBooksResult {
+interface OpenLibraryResult {
   id: string;
   title: string;
   authors: string[];
@@ -22,7 +22,7 @@ interface GoogleBooksResult {
   workKey?: string;
 }
 
-async function searchGoogleBooks(query: string): Promise<GoogleBooksResult[]> {
+async function searchOpenLibrary(query: string): Promise<OpenLibraryResult[]> {
   const res = await fetch(
     `/api/metadata/books-search?q=${encodeURIComponent(query)}`,
     {
@@ -58,7 +58,7 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
   const mutation = isEdit ? update : add;
 
   const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<GoogleBooksResult[]>([]);
+  const [results, setResults] = useState<OpenLibraryResult[]>([]);
   const [searched, setSearched] = useState(false);
   const [applyingDetail, setApplyingDetail] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,7 +99,7 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
       setSearching(true);
       setResults([]);
       try {
-        const found = await searchGoogleBooks(titleValue.trim());
+        const found = await searchOpenLibrary(titleValue.trim());
         setResults(found);
       } finally {
         setSearching(false);
@@ -111,7 +111,7 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
     };
   }, [titleValue, isEdit]);
 
-  async function applyResult(r: GoogleBooksResult) {
+  async function applyResult(r: OpenLibraryResult) {
     justSelectedRef.current = true;
     // Clear all fields first so stale data from a previous selection doesn't linger
     setValue("title", r.title, { shouldValidate: true });

@@ -6,7 +6,6 @@ import type {
   BookVoteStatus,
   BookResultsResponse,
   DateResultsResponse,
-  BookMetadata,
 } from "../types";
 
 // ── Month ─────────────────────────────────────────────────────────────────────
@@ -66,6 +65,13 @@ export function useSetHost(monthKey: string) {
   );
 }
 
+export function useOpenVoting(monthKey: string) {
+  return useMonthMutation(
+    (_: undefined) => api.post(`/months/${monthKey}/open-voting`),
+    ["month", monthKey],
+  );
+}
+
 export function useRevealResults(monthKey: string) {
   return useMonthMutation(
     (_: undefined) => api.post(`/months/${monthKey}/reveal`),
@@ -89,6 +95,8 @@ function invalidateMonth(
 ) {
   qc.invalidateQueries({ queryKey: ["month", monthKey] });
   qc.invalidateQueries({ queryKey: ["month", "current"] });
+  qc.invalidateQueries({ queryKey: ["bookResults", monthKey] });
+  qc.invalidateQueries({ queryKey: ["dateResults", monthKey] });
 }
 
 export function useAddBook(monthKey: string) {
@@ -202,13 +210,5 @@ export function useDateResults(monthKey: string, enabled = true) {
     queryKey: ["dateResults", monthKey],
     queryFn: () => api.get(`/months/${monthKey}/results/dates`),
     enabled: enabled && !!monthKey,
-  });
-}
-
-// ── Metadata ──────────────────────────────────────────────────────────────────
-
-export function useFetchMetadata() {
-  return useMutation<BookMetadata, Error, string>({
-    mutationFn: (url: string) => api.post("/metadata/fetch", { url }),
   });
 }

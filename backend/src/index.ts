@@ -10,6 +10,13 @@ import voteRoutes from "./routes/votes";
 import metadataRoutes from "./routes/metadata";
 import feedbackRoutes from "./routes/feedback";
 
+if (!process.env.SESSION_SECRET) {
+  console.error(
+    "[startup] SESSION_SECRET env var is not set. Signed cookies are insecure. Refusing to start.",
+  );
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
