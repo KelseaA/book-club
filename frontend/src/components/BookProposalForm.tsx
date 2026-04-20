@@ -63,6 +63,14 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
   const [applyingDetail, setApplyingDetail] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
+  const dismissedTitleRef = useRef<string | null>(null);
+  const titleFocusedRef = useRef(false);
+
+  function dismissResults() {
+    dismissedTitleRef.current = titleValue ?? null;
+    setResults([]);
+    setSearched(false);
+  }
 
   const {
     register,
@@ -89,6 +97,15 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
       justSelectedRef.current = false;
       return;
     }
+    // Don't re-open if the user dismissed at this exact title value
+    if (
+      dismissedTitleRef.current !== null &&
+      titleValue?.trim() === dismissedTitleRef.current?.trim()
+    ) {
+      return;
+    }
+    // User typed something new — clear the dismissed guard
+    dismissedTitleRef.current = null;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!titleValue || titleValue.trim().length < 3) {
       setResults([]);
@@ -96,6 +113,8 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
       return;
     }
     debounceRef.current = setTimeout(async () => {
+      // User tabbed away before the search fired — don't show the dropdown
+      if (!titleFocusedRef.current) return;
       setSearching(true);
       setResults([]);
       try {
@@ -105,7 +124,7 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
         setSearching(false);
         setSearched(true);
       }
-    }, 600);
+    }, 250);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -163,6 +182,20 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
               className="input flex-1"
               placeholder="Start typing to search…"
               {...register("title", { required: "Title is required" })}
+              onKeyDown={(e) => e.key === "Escape" && dismissResults()}
+              onFocus={() => {
+                titleFocusedRef.current = true;
+              }}
+              onBlur={() => {
+                titleFocusedRef.current = false;
+                // Cancel any pending search so results don't pop up later
+                if (debounceRef.current) {
+                  clearTimeout(debounceRef.current);
+                  debounceRef.current = null;
+                }
+                setSearching(false);
+                setTimeout(dismissResults, 150);
+              }}
             />
             {searching && (
               <svg
@@ -191,11 +224,20 @@ export default function BookProposalForm({ monthKey, book, onDone }: Props) {
 
           {results.length > 0 && (
             <div className="absolute z-20 left-0 right-0 top-full mt-1 border border-gray-200 rounded-lg shadow-md bg-white divide-y divide-gray-100 overflow-hidden max-h-72 overflow-y-auto">
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-xs text-gray-400 hover:bg-gray-50 text-left border-b border-gray-100"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={dismissResults}
+              >
+                Enter manually instead
+              </button>
               {results.map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => applyResult(r)}
                 >
                   {r.coverUrl ? (
