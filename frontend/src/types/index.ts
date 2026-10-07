@@ -1,6 +1,6 @@
 // Shared TypeScript types mirroring the Prisma models returned from the API
 
-export type MonthStatus = "SETUP" | "VOTING" | "FINALIZED";
+export type MeetingStatus = "SETUP" | "VOTING" | "FINALIZED";
 
 export interface Member {
   id: number;
@@ -28,7 +28,7 @@ export interface MemberSummary {
 
 export interface BookOption {
   id: number;
-  monthId: number;
+  meetingId: number;
   title: string;
   author: string;
   notes?: string | null;
@@ -41,27 +41,34 @@ export interface BookOption {
 
 export interface DateOption {
   id: number;
-  monthId: number;
+  meetingId: number;
   date: string;
   createdAt: string;
 }
 
-export interface BookClubMonth {
+export interface Meeting {
   id: number;
-  monthKey: string;
-  status: MonthStatus;
+  status: MeetingStatus;
   hostMemberId: number;
   host: MemberSummary;
   resultsVisible: boolean;
   revealedAt?: string | null;
   finalBookOptionId?: number | null;
   finalBookOption?: BookOption | null;
-  finalMeetingDate?: string | null;
+  meetingDate?: string | null;
   bookOptions: BookOption[];
   dateOptions: DateOption[];
   createdAt: string;
   updatedAt: string;
   _count: { bookVotes: number };
+}
+
+/** GET /meetings/current — what the dashboard shows */
+export interface CurrentMeetings {
+  /** Finalized meetings that haven't happened yet, soonest first */
+  upcoming: Meeting[];
+  /** Meeting being planned or voted on */
+  active: Meeting | null;
 }
 
 export interface BookVoteRankRow {
@@ -88,7 +95,7 @@ export interface BookResult {
 }
 
 export interface BookResultsResponse {
-  monthKey: string;
+  meetingId: number;
   totalBallots: number;
   results: BookResult[];
 }
@@ -101,7 +108,7 @@ export interface DateResultEntry {
 }
 
 export interface DateResultsResponse {
-  monthKey: string;
+  meetingId: number;
   results: DateResultEntry[];
 }
 

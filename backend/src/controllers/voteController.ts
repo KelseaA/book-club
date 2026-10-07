@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { parseId } from "../lib/params";
 import { z } from "zod";
 
 const FINALIZED = "FINALIZED";
@@ -32,37 +33,41 @@ export const submitVoteSchema = z.object({
  * leaves no DateSelection rows to detect).
  */
 export async function submitVote(req: Request, res: Response) {
-  const { monthKey } = req.params;
+  const meetingId = parseId(req.params.meetingId);
   const { ranks, dateOptionIds } = req.body as {
     ranks: { bookOptionId: number; rank: number }[];
     dateOptionIds: number[];
   };
 
-  const month = await prisma.bookClubMonth.findUnique({
-    where: { monthKey },
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: meetingId },
     include: { bookOptions: true, dateOptions: true },
   });
-  if (!month) return res.status(404).json({ error: "Month not found" });
-  if (month.status === "SETUP") {
+  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+  if (meeting.status === "SETUP") {
     return res.status(400).json({ error: "Voting has not been opened yet" });
   }
-  if (month.status === FINALIZED) {
+  if (meeting.status === FINALIZED) {
     return res
       .status(400)
-      .json({ error: "Month is finalized; voting is closed" });
+      .json({ error: "Meeting is finalized; voting is closed" });
   }
 
   // Prevent duplicate vote
   const existing = await prisma.bookVote.findUnique({
-    where: { monthId_memberId: { monthId: month.id, memberId: req.memberId! } },
+    where: {
+      meetingId_memberId: { meetingId: meeting.id, memberId: req.memberId! },
+    },
   });
   if (existing) {
-    return res.status(409).json({ error: "You have already voted this month" });
+    return res
+      .status(409)
+      .json({ error: "You have already voted for this meeting" });
   }
 
   // Borda count assumes a complete ranking: each of the N books appears
   // exactly once, with ranks 1..N
-  const bookIds = new Set(month.bookOptions.map((b) => b.id));
+  const bookIds = new Set(meeting.bookOptions.map((b) => b.id));
   const rankedIds = new Set(ranks.map((r) => r.bookOptionId));
   const rankValues = new Set(ranks.map((r) => r.rank));
   const n = bookIds.size;
@@ -79,7 +84,7 @@ export async function submitVote(req: Request, res: Response) {
     });
   }
 
-  const validDateIds = new Set(month.dateOptions.map((d) => d.id));
+  const validDateIds = new Set(meeting.dateOptions.map((d) => d.id));
   const selectedDateIds = [...new Set(dateOptionIds)];
   if (!selectedDateIds.every((id) => validDateIds.has(id))) {
     return res.status(400).json({
@@ -90,7 +95,7 @@ export async function submitVote(req: Request, res: Response) {
 
   const vote = await prisma.$transaction(async (tx) => {
     const ballot = await tx.bookVote.create({
-      data: { monthId: month.id, memberId: req.memberId! },
+      data: { meetingId: meeting.id, memberId: req.memberId! },
     });
     await tx.bookVoteRank.createMany({
       data: ranks.map((r) => ({
@@ -118,30 +123,32 @@ export async function submitVote(req: Request, res: Response) {
  * If there are N books, rank 1 gets N points, rank 2 gets N-1, etc.
  */
 export async function getBookResults(req: Request, res: Response) {
-  const { monthKey } = req.params;
+  const meetingId = parseId(req.params.meetingId);
 
-  const month = await prisma.bookClubMonth.findUnique({
-    where: { monthKey },
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: meetingId },
     include: {
       bookOptions: true,
       bookVotes: { include: { ranks: true } },
       host: { select: { id: true, name: true } },
     },
   });
-  if (!month) return res.status(404).json({ error: "Month not found" });
+  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
 
   // Only the host can see results before resultsVisible is true
-  if (!month.resultsVisible && month.hostMemberId !== req.memberId) {
+  if (!meeting.resultsVisible && meeting.hostMemberId !== req.memberId) {
     return res.status(403).json({ error: "Results are not yet visible" });
   }
 
-  const N = month.bookOptions.length;
+  const N = meeting.bookOptions.length;
   // Accumulate Borda points per book option
   const pointsMap = new Map<number, number>(
-    month.bookOptions.map((b: { id: number }) => [b.id, 0] as [number, number]),
+    meeting.bookOptions.map(
+      (b: { id: number }) => [b.id, 0] as [number, number],
+    ),
   );
 
-  for (const ballot of month.bookVotes) {
+  for (const ballot of meeting.bookVotes) {
     for (const rankRow of ballot.ranks) {
       // Borda: rank 1 → N points, rank 2 → N-1 points, …
       const points = N - rankRow.rank + 1;
@@ -152,7 +159,7 @@ export async function getBookResults(req: Request, res: Response) {
     }
   }
 
-  const results = month.bookOptions
+  const results = meeting.bookOptions
     .map(
       (b: {
         id: number;
@@ -168,18 +175,18 @@ export async function getBookResults(req: Request, res: Response) {
     );
 
   return res.json({
-    monthKey,
-    totalBallots: month.bookVotes.length,
+    meetingId,
+    totalBallots: meeting.bookVotes.length,
     results,
   });
 }
 
 /** Compute date availability results (count of available members per date) */
 export async function getDateResults(req: Request, res: Response) {
-  const { monthKey } = req.params;
+  const meetingId = parseId(req.params.meetingId);
 
-  const month = await prisma.bookClubMonth.findUnique({
-    where: { monthKey },
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: meetingId },
     include: {
       dateOptions: {
         include: {
@@ -190,13 +197,13 @@ export async function getDateResults(req: Request, res: Response) {
       },
     },
   });
-  if (!month) return res.status(404).json({ error: "Month not found" });
+  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
 
-  if (!month.resultsVisible && month.hostMemberId !== req.memberId) {
+  if (!meeting.resultsVisible && meeting.hostMemberId !== req.memberId) {
     return res.status(403).json({ error: "Results are not yet visible" });
   }
 
-  const results = month.dateOptions
+  const results = meeting.dateOptions
     .map(
       (d: {
         id: number;
@@ -213,22 +220,24 @@ export async function getDateResults(req: Request, res: Response) {
     )
     .sort((a: { count: number }, b: { count: number }) => b.count - a.count);
 
-  return res.json({ monthKey, results });
+  return res.json({ meetingId, results });
 }
 
-/** Returns whether the current member has already voted this month */
+/** Returns whether the current member has already voted this meeting */
 export async function getMyVoteStatus(req: Request, res: Response) {
-  const { monthKey } = req.params;
-  const month = await prisma.bookClubMonth.findUnique({ where: { monthKey } });
-  if (!month) return res.status(404).json({ error: "Month not found" });
+  const meetingId = parseId(req.params.meetingId);
+  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
+  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
 
   const bookVote = await prisma.bookVote.findUnique({
-    where: { monthId_memberId: { monthId: month.id, memberId: req.memberId! } },
+    where: {
+      meetingId_memberId: { meetingId: meeting.id, memberId: req.memberId! },
+    },
     include: { ranks: { orderBy: { rank: "asc" } } },
   });
 
   const dateSelections = await prisma.dateSelection.findMany({
-    where: { memberId: req.memberId!, dateOption: { monthId: month.id } },
+    where: { memberId: req.memberId!, dateOption: { meetingId: meeting.id } },
   });
 
   return res.json({

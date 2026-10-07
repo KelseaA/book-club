@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { parseId } from "../lib/params";
 import { z } from "zod";
-// MonthStatus values as const to avoid Prisma client generation requirement at compile time
+// MeetingStatus values as const to avoid Prisma client generation requirement at compile time
 const FINALIZED = "FINALIZED";
 
 export const bookOptionSchema = z.object({
@@ -15,48 +16,48 @@ export const bookOptionSchema = z.object({
 
 const MAX_BOOKS = 5;
 
-async function getMonthAndAssertHost(
-  monthKey: string,
+async function getMeetingAndAssertHost(
+  meetingId: number,
   memberId: number,
   res: Response,
   opts: { blockIfVoted?: boolean } = {},
 ) {
-  const month = await prisma.bookClubMonth.findUnique({
-    where: { monthKey },
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: meetingId },
     include: {
       bookOptions: true,
       _count: { select: { bookVotes: true } },
     },
   });
-  if (!month) {
-    res.status(404).json({ error: "Month not found" });
+  if (!meeting) {
+    res.status(404).json({ error: "Meeting not found" });
     return null;
   }
-  if (month.hostMemberId !== memberId) {
+  if (meeting.hostMemberId !== memberId) {
     res.status(403).json({ error: "Only the host can manage book proposals" });
     return null;
   }
-  if (month.status === FINALIZED) {
-    res.status(400).json({ error: "Month is finalized" });
+  if (meeting.status === FINALIZED) {
+    res.status(400).json({ error: "Meeting is finalized" });
     return null;
   }
-  if (opts.blockIfVoted && month._count.bookVotes > 0) {
+  if (opts.blockIfVoted && meeting._count.bookVotes > 0) {
     res.status(400).json({
       error: "Votes have already been cast — book list cannot be changed",
     });
     return null;
   }
-  return month;
+  return meeting;
 }
 
 export async function addBook(req: Request, res: Response) {
-  const { monthKey } = req.params;
-  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res, {
+  const meetingId = parseId(req.params.meetingId);
+  const meeting = await getMeetingAndAssertHost(meetingId, req.memberId!, res, {
     blockIfVoted: true,
   });
-  if (!month) return;
+  if (!meeting) return;
 
-  if (month.bookOptions.length >= MAX_BOOKS) {
+  if (meeting.bookOptions.length >= MAX_BOOKS) {
     return res
       .status(400)
       .json({ error: `Maximum ${MAX_BOOKS} book options allowed` });
@@ -65,7 +66,7 @@ export async function addBook(req: Request, res: Response) {
   const { title, author, notes, genres, coverImageUrl, sourceUrl } = req.body;
   const book = await prisma.bookOption.create({
     data: {
-      monthId: month.id,
+      meetingId: meeting.id,
       title,
       author,
       notes: notes || null,
@@ -78,13 +79,14 @@ export async function addBook(req: Request, res: Response) {
 }
 
 export async function updateBook(req: Request, res: Response) {
-  const { monthKey, bookId } = req.params;
-  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res, {
+  const meetingId = parseId(req.params.meetingId);
+  const { bookId } = req.params;
+  const meeting = await getMeetingAndAssertHost(meetingId, req.memberId!, res, {
     blockIfVoted: true,
   });
-  if (!month) return;
+  if (!meeting) return;
 
-  const book = month.bookOptions.find(
+  const book = meeting.bookOptions.find(
     (b: { id: number }) => b.id === Number(bookId),
   );
   if (!book) return res.status(404).json({ error: "Book option not found" });
@@ -105,13 +107,14 @@ export async function updateBook(req: Request, res: Response) {
 }
 
 export async function deleteBook(req: Request, res: Response) {
-  const { monthKey, bookId } = req.params;
-  const month = await getMonthAndAssertHost(monthKey, req.memberId!, res, {
+  const meetingId = parseId(req.params.meetingId);
+  const { bookId } = req.params;
+  const meeting = await getMeetingAndAssertHost(meetingId, req.memberId!, res, {
     blockIfVoted: true,
   });
-  if (!month) return;
+  if (!meeting) return;
 
-  const book = month.bookOptions.find(
+  const book = meeting.bookOptions.find(
     (b: { id: number }) => b.id === Number(bookId),
   );
   if (!book) return res.status(404).json({ error: "Book option not found" });

@@ -38,7 +38,7 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="archive" element={<ArchiveListPage />} />
-          <Route path="archive/:monthKey" element={<ArchiveDetailPage />} />
+          <Route path="archive/:meetingId" element={<ArchiveDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="help" element={<HelpPage />} />
         </Route>

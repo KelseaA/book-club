@@ -27,19 +27,19 @@ interface FormValues {
 }
 
 interface Props {
-  monthKey: string;
+  meetingId: number;
   dateOption?: DateOption;
   onDone: () => void;
 }
 
 export default function DateProposalForm({
-  monthKey,
+  meetingId,
   dateOption,
   onDone,
 }: Props) {
   const isEdit = !!dateOption;
-  const add = useAddDate(monthKey);
-  const update = useUpdateDate(monthKey, dateOption?.id ?? 0);
+  const add = useAddDate(meetingId);
+  const update = useUpdateDate(meetingId, dateOption?.id ?? 0);
   const mutation = isEdit ? update : add;
 
   const existing = dateOption ? new Date(dateOption.date) : null;

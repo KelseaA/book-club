@@ -13,9 +13,9 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.post("/:monthKey/votes", validate(submitVoteSchema), submitVote);
-router.get("/:monthKey/votes/me", getMyVoteStatus);
-router.get("/:monthKey/results/books", getBookResults);
-router.get("/:monthKey/results/dates", getDateResults);
+router.post("/:meetingId/votes", validate(submitVoteSchema), submitVote);
+router.get("/:meetingId/votes/me", getMyVoteStatus);
+router.get("/:meetingId/results/books", getBookResults);
+router.get("/:meetingId/results/dates", getDateResults);
 
 export default router;

@@ -12,8 +12,8 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.post("/:monthKey/dates", validate(dateOptionSchema), addDate);
-router.put("/:monthKey/dates/:dateId", validate(dateOptionSchema), updateDate);
-router.delete("/:monthKey/dates/:dateId", deleteDate);
+router.post("/:meetingId/dates", validate(dateOptionSchema), addDate);
+router.put("/:meetingId/dates/:dateId", validate(dateOptionSchema), updateDate);
+router.delete("/:meetingId/dates/:dateId", deleteDate);
 
 export default router;

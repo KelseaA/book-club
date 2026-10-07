@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "./routes/auth";
 import memberRoutes from "./routes/members";
-import monthRoutes from "./routes/months";
+import meetingRoutes from "./routes/meetings";
 import bookOptionRoutes from "./routes/bookOptions";
 import dateOptionRoutes from "./routes/dateOptions";
 import voteRoutes from "./routes/votes";
@@ -36,10 +36,10 @@ app.use(cookieParser(process.env.SESSION_SECRET));
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/members", memberRoutes);
-app.use("/api/months", monthRoutes);
-app.use("/api/months", bookOptionRoutes); // /api/months/:monthKey/books
-app.use("/api/months", dateOptionRoutes); // /api/months/:monthKey/dates
-app.use("/api/months", voteRoutes); // /api/months/:monthKey/votes
+app.use("/api/meetings", meetingRoutes);
+app.use("/api/meetings", bookOptionRoutes); // /api/meetings/:meetingId/books
+app.use("/api/meetings", dateOptionRoutes); // /api/meetings/:meetingId/dates
+app.use("/api/meetings", voteRoutes); // /api/meetings/:meetingId/votes
 app.use("/api/metadata", metadataRoutes); // /api/metadata/fetch
 app.use("/api/feedback", feedbackRoutes);
 

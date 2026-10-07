@@ -12,8 +12,8 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.post("/:monthKey/books", validate(bookOptionSchema), addBook);
-router.put("/:monthKey/books/:bookId", validate(bookOptionSchema), updateBook);
-router.delete("/:monthKey/books/:bookId", deleteBook);
+router.post("/:meetingId/books", validate(bookOptionSchema), addBook);
+router.put("/:meetingId/books/:bookId", validate(bookOptionSchema), updateBook);
+router.delete("/:meetingId/books/:bookId", deleteBook);
 
 export default router;

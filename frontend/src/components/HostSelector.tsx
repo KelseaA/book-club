@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useSetHost, useMembers } from "../hooks/useBookClub";
-import type { BookClubMonth } from "../types";
+import type { Meeting } from "../types";
 
 interface Props {
-  month: BookClubMonth;
+  meeting: Meeting;
 }
 
-export default function HostSelector({ month }: Props) {
+export default function HostSelector({ meeting }: Props) {
   const { data: members = [] } = useMembers();
-  const setHost = useSetHost(month.monthKey);
+  const setHost = useSetHost(meeting.id);
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -24,7 +24,7 @@ export default function HostSelector({ month }: Props) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  const currentHost = members.find((m) => m.id === month.hostMemberId);
+  const currentHost = members.find((m) => m.id === meeting.hostMemberId);
 
   function handleSelect(memberId: number) {
     setHost.mutate(memberId, { onSuccess: () => setOpen(false) });
@@ -54,15 +54,15 @@ export default function HostSelector({ month }: Props) {
             <button
               key={m.id}
               className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center justify-between ${
-                m.id === month.hostMemberId
+                m.id === meeting.hostMemberId
                   ? "font-semibold text-brand-600"
                   : "text-gray-700"
               }`}
               onClick={() => handleSelect(m.id)}
-              disabled={m.id === month.hostMemberId}
+              disabled={m.id === meeting.hostMemberId}
             >
               {m.name}
-              {m.id === month.hostMemberId && (
+              {m.id === meeting.hostMemberId && (
                 <span className="text-xs text-brand-400">current</span>
               )}
             </button>

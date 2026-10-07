@@ -15,15 +15,20 @@ export function errorHandler(
     // Unique constraint — e.g. a double-clicked vote submit racing past the
     // "already voted" check and hitting the one-ballot-per-member index
     if (err.code === "P2002") {
-      return res
-        .status(409)
-        .json({ error: "This has already been submitted" });
+      return res.status(409).json({ error: "This has already been submitted" });
     }
     // Foreign key constraint — e.g. deleting an option that has votes
     if (err.code === "P2003") {
       return res
         .status(409)
         .json({ error: "This item is in use and can't be changed" });
+    }
+    // Serializable transaction conflict — e.g. two members starting the
+    // next meeting at the same moment
+    if (err.code === "P2034") {
+      return res
+        .status(409)
+        .json({ error: "Someone else just did that — refresh and try again" });
     }
     // Record to update/delete not found
     if (err.code === "P2025") {

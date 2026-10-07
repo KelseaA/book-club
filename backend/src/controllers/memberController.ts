@@ -76,15 +76,15 @@ export async function listMembers(_req: Request, res: Response) {
 export async function deleteAccount(req: Request, res: Response) {
   const memberId = req.memberId!;
 
-  // Block if the member is host on any active (non-finalized) month
-  const activeHostedMonth = await prisma.bookClubMonth.findFirst({
+  // Block if the member is host of a meeting that isn't finalized
+  const activeHostedMeeting = await prisma.meeting.findFirst({
     where: { hostMemberId: memberId, status: { not: "FINALIZED" } },
-    select: { monthKey: true },
+    select: { id: true },
   });
-  if (activeHostedMonth) {
+  if (activeHostedMeeting) {
     return res.status(400).json({
       error:
-        "You are the host for an active month. Transfer the host role before deleting your account.",
+        "You are the host of the meeting being planned. Transfer the host role before deleting your account.",
     });
   }
 

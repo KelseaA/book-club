@@ -1,34 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import type {
-  BookClubMonth,
+  Meeting,
+  CurrentMeetings,
   MemberSummary,
   BookVoteStatus,
   BookResultsResponse,
   DateResultsResponse,
 } from "../types";
 
-// ── Month ─────────────────────────────────────────────────────────────────────
+// ── Meetings ──────────────────────────────────────────────────────────────────
 
-export function useCurrentMonth() {
-  return useQuery<BookClubMonth>({
-    queryKey: ["month", "current"],
-    queryFn: () => api.get("/months/current"),
+/** Upcoming finalized meetings and the one being planned, for the dashboard */
+export function useCurrentMeetings() {
+  return useQuery<CurrentMeetings>({
+    queryKey: ["meetings", "current"],
+    queryFn: () => api.get("/meetings/current"),
   });
 }
 
-export function useMonth(monthKey: string) {
-  return useQuery<BookClubMonth>({
-    queryKey: ["month", monthKey],
-    queryFn: () => api.get(`/months/${monthKey}`),
-    enabled: !!monthKey,
+export function useMeeting(meetingId: number) {
+  return useQuery<Meeting>({
+    queryKey: ["meeting", meetingId],
+    queryFn: () => api.get(`/meetings/${meetingId}`),
+    enabled: !!meetingId,
   });
 }
 
-export function useMonths() {
-  return useQuery<BookClubMonth[]>({
-    queryKey: ["months"],
-    queryFn: () => api.get("/months"),
+/** Meetings that have happened, for the archive */
+export function useMeetings() {
+  return useQuery<Meeting[]>({
+    queryKey: ["meetings", "archive"],
+    queryFn: () => api.get("/meetings"),
   });
 }
 
@@ -39,67 +42,63 @@ export function useMembers() {
   });
 }
 
-// ── Month mutations ───────────────────────────────────────────────────────────
+// ── Meeting mutations ─────────────────────────────────────────────────────────
 
-function useMonthMutation<TVar>(
-  fn: (v: TVar) => Promise<BookClubMonth>,
-  keys: string[],
-) {
+function useMeetingMutation<TVar>(fn: (v: TVar) => Promise<Meeting>) {
   const qc = useQueryClient();
-  return useMutation<BookClubMonth, Error, TVar>({
+  return useMutation<Meeting, Error, TVar>({
     mutationFn: fn,
     onSuccess: (data) => {
-      qc.setQueryData(["month", data.monthKey], data);
-      qc.setQueryData(["month", "current"], (old: BookClubMonth | undefined) =>
-        old?.monthKey === data.monthKey ? data : old,
-      );
+      qc.setQueryData(["meeting", data.id], data);
+      // Status changes can move a meeting between the dashboard's slots
+      // (e.g. finalizing turns the active meeting into the upcoming one)
+      qc.invalidateQueries({ queryKey: ["meetings"] });
     },
   });
 }
 
-export function useSetHost(monthKey: string) {
-  return useMonthMutation(
-    (hostMemberId: number) =>
-      api.put(`/months/${monthKey}/host`, { hostMemberId }),
-    ["month", monthKey],
+export function useStartMeeting() {
+  return useMeetingMutation((_: undefined) => api.post("/meetings"));
+}
+
+export function useSetHost(meetingId: number) {
+  return useMeetingMutation((hostMemberId: number) =>
+    api.put(`/meetings/${meetingId}/host`, { hostMemberId }),
   );
 }
 
-export function useOpenVoting(monthKey: string) {
-  return useMonthMutation(
-    (_: undefined) => api.post(`/months/${monthKey}/open-voting`),
-    ["month", monthKey],
+export function useOpenVoting(meetingId: number) {
+  return useMeetingMutation((_: undefined) =>
+    api.post(`/meetings/${meetingId}/open-voting`),
   );
 }
 
-export function useRevealResults(monthKey: string) {
-  return useMonthMutation(
-    (_: undefined) => api.post(`/months/${monthKey}/reveal`),
-    ["month", monthKey],
+export function useRevealResults(meetingId: number) {
+  return useMeetingMutation((_: undefined) =>
+    api.post(`/meetings/${meetingId}/reveal`),
   );
 }
 
-export function useFinalizeMonth(monthKey: string) {
-  return useMonthMutation(
-    (body: { finalBookOptionId: number; finalMeetingDate: string }) =>
-      api.post(`/months/${monthKey}/finalize`, body),
-    ["month", monthKey],
+export function useFinalizeMeeting(meetingId: number) {
+  return useMeetingMutation(
+    (body: { finalBookOptionId: number; meetingDate: string }) =>
+      api.post(`/meetings/${meetingId}/finalize`, body),
   );
 }
 
 // ── Book options ──────────────────────────────────────────────────────────────
 
-function invalidateMonth(
+function invalidateMeeting(
   qc: ReturnType<typeof useQueryClient>,
-  monthKey: string,
+  meetingId: number,
 ) {
-  qc.invalidateQueries({ queryKey: ["month", monthKey] });
-  qc.invalidateQueries({ queryKey: ["month", "current"] });
-  qc.invalidateQueries({ queryKey: ["bookResults", monthKey] });
-  qc.invalidateQueries({ queryKey: ["dateResults", monthKey] });
+  qc.invalidateQueries({ queryKey: ["meeting", meetingId] });
+  qc.invalidateQueries({ queryKey: ["meetings", "current"] });
+  qc.invalidateQueries({ queryKey: ["bookResults", meetingId] });
+  qc.invalidateQueries({ queryKey: ["dateResults", meetingId] });
 }
 
-export function useAddBook(monthKey: string) {
+export function useAddBook(meetingId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: {
@@ -108,12 +107,12 @@ export function useAddBook(monthKey: string) {
       notes?: string;
       coverImageUrl?: string;
       sourceUrl?: string;
-    }) => api.post(`/months/${monthKey}/books`, body),
-    onSuccess: () => invalidateMonth(qc, monthKey),
+    }) => api.post(`/meetings/${meetingId}/books`, body),
+    onSuccess: () => invalidateMeeting(qc, meetingId),
   });
 }
 
-export function useUpdateBook(monthKey: string, bookId: number) {
+export function useUpdateBook(meetingId: number, bookId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: {
@@ -122,88 +121,88 @@ export function useUpdateBook(monthKey: string, bookId: number) {
       notes?: string;
       coverImageUrl?: string;
       sourceUrl?: string;
-    }) => api.put(`/months/${monthKey}/books/${bookId}`, body),
-    onSuccess: () => invalidateMonth(qc, monthKey),
+    }) => api.put(`/meetings/${meetingId}/books/${bookId}`, body),
+    onSuccess: () => invalidateMeeting(qc, meetingId),
   });
 }
 
-export function useDeleteBook(monthKey: string) {
+export function useDeleteBook(meetingId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (bookId: number) =>
-      api.delete(`/months/${monthKey}/books/${bookId}`),
-    onSuccess: () => invalidateMonth(qc, monthKey),
+      api.delete(`/meetings/${meetingId}/books/${bookId}`),
+    onSuccess: () => invalidateMeeting(qc, meetingId),
   });
 }
 
 // ── Date options ──────────────────────────────────────────────────────────────
 
-export function useAddDate(monthKey: string) {
+export function useAddDate(meetingId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: { date: string }) =>
-      api.post(`/months/${monthKey}/dates`, body),
-    onSuccess: () => invalidateMonth(qc, monthKey),
+      api.post(`/meetings/${meetingId}/dates`, body),
+    onSuccess: () => invalidateMeeting(qc, meetingId),
   });
 }
 
-export function useUpdateDate(monthKey: string, dateId: number) {
+export function useUpdateDate(meetingId: number, dateId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: { date: string }) =>
-      api.put(`/months/${monthKey}/dates/${dateId}`, body),
-    onSuccess: () => invalidateMonth(qc, monthKey),
+      api.put(`/meetings/${meetingId}/dates/${dateId}`, body),
+    onSuccess: () => invalidateMeeting(qc, meetingId),
   });
 }
 
-export function useDeleteDate(monthKey: string) {
+export function useDeleteDate(meetingId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dateId: number) =>
-      api.delete(`/months/${monthKey}/dates/${dateId}`),
-    onSuccess: () => invalidateMonth(qc, monthKey),
+      api.delete(`/meetings/${meetingId}/dates/${dateId}`),
+    onSuccess: () => invalidateMeeting(qc, meetingId),
   });
 }
 
 // ── Votes ─────────────────────────────────────────────────────────────────────
 
-export function useMyVoteStatus(monthKey: string) {
+export function useMyVoteStatus(meetingId: number) {
   return useQuery<BookVoteStatus>({
-    queryKey: ["voteStatus", monthKey],
-    queryFn: () => api.get(`/months/${monthKey}/votes/me`),
-    enabled: !!monthKey,
+    queryKey: ["voteStatus", meetingId],
+    queryFn: () => api.get(`/meetings/${meetingId}/votes/me`),
+    enabled: !!meetingId,
   });
 }
 
-export function useSubmitVote(monthKey: string) {
+export function useSubmitVote(meetingId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: {
       ranks: { bookOptionId: number; rank: number }[];
       dateOptionIds: number[];
-    }) => api.post(`/months/${monthKey}/votes`, body),
+    }) => api.post(`/meetings/${meetingId}/votes`, body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["voteStatus", monthKey] });
+      qc.invalidateQueries({ queryKey: ["voteStatus", meetingId] });
       // Vote count gates host controls, and the host may be watching results
-      invalidateMonth(qc, monthKey);
+      invalidateMeeting(qc, meetingId);
     },
   });
 }
 
 // ── Results ───────────────────────────────────────────────────────────────────
 
-export function useBookResults(monthKey: string, enabled = true) {
+export function useBookResults(meetingId: number, enabled = true) {
   return useQuery<BookResultsResponse>({
-    queryKey: ["bookResults", monthKey],
-    queryFn: () => api.get(`/months/${monthKey}/results/books`),
-    enabled: enabled && !!monthKey,
+    queryKey: ["bookResults", meetingId],
+    queryFn: () => api.get(`/meetings/${meetingId}/results/books`),
+    enabled: enabled && !!meetingId,
   });
 }
 
-export function useDateResults(monthKey: string, enabled = true) {
+export function useDateResults(meetingId: number, enabled = true) {
   return useQuery<DateResultsResponse>({
-    queryKey: ["dateResults", monthKey],
-    queryFn: () => api.get(`/months/${monthKey}/results/dates`),
-    enabled: enabled && !!monthKey,
+    queryKey: ["dateResults", meetingId],
+    queryFn: () => api.get(`/meetings/${meetingId}/results/dates`),
+    enabled: enabled && !!meetingId,
   });
 }

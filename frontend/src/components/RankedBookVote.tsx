@@ -67,7 +67,7 @@ function SortableItem({ book, index }: SortableItemProps) {
 }
 
 interface Props {
-  monthKey: string;
+  meetingId: number;
   books: BookOption[];
   onRanksChange: (ranks: { bookOptionId: number; rank: number }[]) => void;
 }

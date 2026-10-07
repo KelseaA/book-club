@@ -23,7 +23,7 @@ export default function Layout() {
                 isActive ? "underline underline-offset-4" : "hover:underline"
               }
             >
-              This Month
+              Home
             </NavLink>
             <NavLink
               to="/archive"

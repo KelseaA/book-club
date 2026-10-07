@@ -96,7 +96,7 @@ export default function RegisterPage() {
           </div>
           <hr className="border-gray-200" />
           <p className="text-xs text-gray-500">
-            Address (optional — shown to members for the month you host)
+            Address (optional — shown to members for meetings you host)
           </p>
           <div>
             <label className="label">Street Address</label>

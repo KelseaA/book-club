@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { DateOption } from "../types";
 
 interface Props {
-  monthKey: string;
+  meetingId: number;
   dateOptions: DateOption[];
   onSelectionChange: (ids: number[]) => void;
 }

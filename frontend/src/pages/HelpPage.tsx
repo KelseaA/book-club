@@ -9,12 +9,12 @@ interface Step {
 
 const steps: Step[] = [
   {
-    title: "This Month page",
-    body: "Your home base. The host sets up book proposals and possible meeting dates here, then opens voting when ready. Everything for the current month happens on this one screen.",
+    title: "Home page",
+    body: "Your home base. The host sets up book proposals and possible meeting dates here, then opens voting when ready. Once a meeting is finalized, its book, date, and location stay at the top of the page until the meeting happens. Anyone can start planning the next meeting from here whenever they're ready.",
   },
   {
     title: "The host role",
-    body: "Any member can reassign the host using the selector at the top of This Month page. The host is the only person who can add, edit, or remove book proposals and dates, and they're the ones who open voting, reveal results, and finalize the month.",
+    body: "Any member can reassign the host using the selector at the top of the Home page. The host is the only person who can add, edit, or remove book proposals and dates, and they're the ones who open voting, reveal results, and finalize the meeting.",
   },
   {
     title: "Book Proposals",
@@ -34,15 +34,15 @@ const steps: Step[] = [
   },
   {
     title: "Results",
-    body: 'The host can see results as votes come in. When they\'re ready to share, they click "Reveal Results" to make them visible to everyone. Results show how the group ranked each book and which dates had the most availability. The host then picks the winning book and meeting date to finalize the month.',
+    body: 'The host can see results as votes come in. When they\'re ready to share, they click "Reveal Results" to make them visible to everyone. Results show how the group ranked each book and which dates had the most availability. The host then picks the winning book and meeting date to finalize the meeting.',
   },
   {
     title: "Archive",
-    body: "Every past month lives in the Archive, accessible from the top menu. You can browse previous picks, results, and meeting details any time.",
+    body: "Every past meeting lives in the Archive, accessible from the top menu. You can browse previous picks and how the group ranked the books any time.",
   },
   {
     title: "Your Profile",
-    body: "Click your name in the top menu to update your display name, home address, or password. Your address is shown to other members on the dashboard when you are the host for that month.",
+    body: "Click your name in the top menu to update your display name, home address, or password. Your address is shown to other members on the dashboard when you are hosting the meeting.",
   },
 ];
 

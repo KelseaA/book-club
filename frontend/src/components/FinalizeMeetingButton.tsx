@@ -1,13 +1,13 @@
 import { useState } from "react";
 import {
-  useFinalizeMonth,
+  useFinalizeMeeting,
   useBookResults,
   useDateResults,
 } from "../hooks/useBookClub";
-import type { BookClubMonth } from "../types";
+import type { Meeting } from "../types";
 
 interface Props {
-  month: BookClubMonth;
+  meeting: Meeting;
 }
 
 function fmt(iso: string) {
@@ -19,30 +19,28 @@ function fmt(iso: string) {
 }
 
 /**
- * Lets the host finalize the month.
+ * Lets the host finalize the meeting.
  * Detects ties and requires manual tie-break selection.
  */
-export default function FinalizeMonthButton({ month }: Props) {
+export default function FinalizeMeetingButton({ meeting }: Props) {
   const [open, setOpen] = useState(false);
   const [finalBookId, setFinalBookId] = useState<number | "">("");
   const [finalDate, setFinalDate] = useState<string>("");
 
-  const finalize = useFinalizeMonth(month.monthKey);
-  const booksQuery = useBookResults(month.monthKey, open);
-  const datesQuery = useDateResults(month.monthKey, open);
+  const finalize = useFinalizeMeeting(meeting.id);
+  const booksQuery = useBookResults(meeting.id, open);
+  const datesQuery = useDateResults(meeting.id, open);
 
-  if (month.status === "FINALIZED") {
+  if (meeting.status === "FINALIZED") {
     return (
       <div className="text-sm text-green-700 font-medium space-y-1">
-        <p>Month finalized</p>
-        {month.finalBookOption && (
+        <p>Meeting finalized</p>
+        {meeting.finalBookOption && (
           <p>
-            Winner: <strong>{month.finalBookOption.title}</strong>
+            Winner: <strong>{meeting.finalBookOption.title}</strong>
           </p>
         )}
-        {month.finalMeetingDate && (
-          <p>Meeting: {fmt(month.finalMeetingDate)}</p>
-        )}
+        {meeting.meetingDate && <p>Meeting: {fmt(meeting.meetingDate)}</p>}
       </div>
     );
   }
@@ -101,7 +99,7 @@ export default function FinalizeMonthButton({ month }: Props) {
                 onClick={() =>
                   finalize.mutate({
                     finalBookOptionId: Number(finalBookId),
-                    finalMeetingDate: finalDate,
+                    meetingDate: finalDate,
                   })
                 }
               >

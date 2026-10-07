@@ -17,7 +17,7 @@ async function main() {
   await prisma.feedback.deleteMany();
   await prisma.bookOption.deleteMany();
   await prisma.dateOption.deleteMany();
-  await prisma.bookClubMonth.deleteMany();
+  await prisma.meeting.deleteMany();
   await prisma.member.deleteMany();
 
   console.log("✅ All tables cleared.");

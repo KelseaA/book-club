@@ -1,19 +1,15 @@
 import { useRevealResults } from "../hooks/useBookClub";
-import type { BookClubMonth } from "../types";
+import type { Meeting } from "../types";
 
-export default function RevealResultsButton({
-  month,
-}: {
-  month: BookClubMonth;
-}) {
-  const reveal = useRevealResults(month.monthKey);
+export default function RevealResultsButton({ meeting }: { meeting: Meeting }) {
+  const reveal = useRevealResults(meeting.id);
 
-  if (month.resultsVisible) {
+  if (meeting.resultsVisible) {
     return (
       <p className="text-sm text-green-700 font-medium">
         ✓ Results revealed{" "}
-        {month.revealedAt
-          ? `on ${new Date(month.revealedAt).toLocaleDateString()}`
+        {meeting.revealedAt
+          ? `on ${new Date(meeting.revealedAt).toLocaleDateString()}`
           : ""}
       </p>
     );

@@ -46,15 +46,15 @@ async function fetchWorkSubjects(
 }
 
 interface Props {
-  monthKey: string;
+  meetingId: number;
   book?: BookOption;
   onDone: () => void;
 }
 
-export default function BookProposalForm({ monthKey, book, onDone }: Props) {
+export default function BookProposalForm({ meetingId, book, onDone }: Props) {
   const isEdit = !!book;
-  const add = useAddBook(monthKey);
-  const update = useUpdateBook(monthKey, book?.id ?? 0);
+  const add = useAddBook(meetingId);
+  const update = useUpdateBook(meetingId, book?.id ?? 0);
   const mutation = isEdit ? update : add;
 
   const [searching, setSearching] = useState(false);

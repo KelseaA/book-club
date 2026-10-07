@@ -1,48 +1,39 @@
 import { Link } from "react-router-dom";
-import { useMonths } from "../hooks/useBookClub";
-import MonthStatusBadge from "../components/MonthStatusBadge";
-
-function formatMonthKey(key: string) {
-  const [y, m] = key.split("-");
-  return new Date(Number(y), Number(m) - 1).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-  });
-}
+import { useMeetings } from "../hooks/useBookClub";
+import { formatMeetingDate, meetingTitle } from "../lib/meetings";
 
 export default function ArchiveListPage() {
-  const { data: months, isLoading, error } = useMonths();
+  const { data: meetings, isLoading, error } = useMeetings();
 
   if (isLoading) return <p className="text-gray-400">Loading…</p>;
   if (error) return <p className="error-text">{(error as Error).message}</p>;
 
-  const finalized = (months ?? []).filter((m) => m.status === "FINALIZED");
-
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Archive</h1>
-      {finalized.length === 0 ? (
-        <p className="text-gray-400">No finalized months yet.</p>
+      {!meetings?.length ? (
+        <p className="text-gray-400">No past meetings yet.</p>
       ) : (
         <div className="space-y-3">
-          {finalized.map((month) => (
+          {meetings.map((meeting) => (
             <Link
-              key={month.monthKey}
-              to={`/archive/${month.monthKey}`}
+              key={meeting.id}
+              to={`/archive/${meeting.id}`}
               className="card flex items-center justify-between hover:border-brand-300 transition-colors"
             >
               <div>
-                <p className="font-semibold">
-                  {formatMonthKey(month.monthKey)}
-                </p>
-                <p className="text-sm text-gray-500">Host: {month.host.name}</p>
-                {month.finalBookOption && (
-                  <p className="text-sm text-brand-600 mt-1">
-                    {month.finalBookOption.title}
+                <p className="font-semibold">{meetingTitle(meeting)}</p>
+                {meeting.finalBookOption && (
+                  <p className="text-sm text-gray-500">
+                    {meeting.finalBookOption.author}
                   </p>
                 )}
+                <p className="text-sm text-gray-500 mt-1">
+                  {meeting.meetingDate &&
+                    `${formatMeetingDate(meeting.meetingDate, "short")} · `}
+                  Hosted by {meeting.host.name}
+                </p>
               </div>
-              <MonthStatusBadge status={month.status} />
             </Link>
           ))}
         </div>
