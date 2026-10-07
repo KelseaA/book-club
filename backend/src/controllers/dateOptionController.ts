@@ -5,7 +5,6 @@ const FINALIZED = "FINALIZED";
 
 export const dateOptionSchema = z.object({
   date: z.string().datetime(),
-  label: z.string().max(100).optional(),
 });
 
 const MAX_DATES = 4;
@@ -45,9 +44,9 @@ export async function addDate(req: Request, res: Response) {
       .json({ error: `Maximum ${MAX_DATES} date options allowed` });
   }
 
-  const { date, label } = req.body;
+  const { date } = req.body;
   const dateOption = await prisma.dateOption.create({
-    data: { monthId: month.id, date: new Date(date), label: label || null },
+    data: { monthId: month.id, date: new Date(date) },
   });
   return res.status(201).json(dateOption);
 }
@@ -63,10 +62,10 @@ export async function updateDate(req: Request, res: Response) {
   if (!dateOption)
     return res.status(404).json({ error: "Date option not found" });
 
-  const { date, label } = req.body;
+  const { date } = req.body;
   const updated = await prisma.dateOption.update({
     where: { id: dateOption.id },
-    data: { date: new Date(date), label: label || null },
+    data: { date: new Date(date) },
   });
   return res.json(updated);
 }

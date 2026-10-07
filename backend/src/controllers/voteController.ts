@@ -66,7 +66,7 @@ export async function submitBookVote(req: Request, res: Response) {
   }
 
   // Create ballot and ranks in a transaction
-  const vote = await prisma.$transaction(async (tx: typeof prisma) => {
+  const vote = await prisma.$transaction(async (tx) => {
     const ballot = await tx.bookVote.create({
       data: { monthId: month.id, memberId: req.memberId! },
     });
@@ -231,12 +231,10 @@ export async function getDateResults(req: Request, res: Response) {
       (d: {
         id: number;
         date: Date;
-        label: string | null;
         dateSelections: { member: { id: number; name: string } }[];
       }) => ({
         id: d.id,
         date: d.date,
-        label: d.label,
         count: d.dateSelections.length,
         availableMembers: d.dateSelections.map(
           (s: { member: { id: number; name: string } }) => s.member,

@@ -1,4 +1,6 @@
 import express from "express";
+// Patches Express 4 so errors thrown in async handlers reach errorHandler
+import "express-async-errors";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "./routes/auth";
@@ -9,6 +11,7 @@ import dateOptionRoutes from "./routes/dateOptions";
 import voteRoutes from "./routes/votes";
 import metadataRoutes from "./routes/metadata";
 import feedbackRoutes from "./routes/feedback";
+import { errorHandler } from "./middleware/errorHandler";
 
 if (!process.env.SESSION_SECRET) {
   console.error(
@@ -42,6 +45,9 @@ app.use("/api/feedback", feedbackRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// Must be registered after all routes
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Book Club API running on http://localhost:${PORT}`);

@@ -43,7 +43,6 @@ export interface DateOption {
   id: number;
   monthId: number;
   date: string;
-  label?: string | null;
   createdAt: string;
 }
 
@@ -98,7 +97,6 @@ export interface BookResultsResponse {
 export interface DateResultEntry {
   id: number;
   date: string;
-  label?: string | null;
   count: number;
   availableMembers: MemberSummary[];
 }

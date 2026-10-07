@@ -5,8 +5,6 @@ function fmt(iso: string) {
     weekday: "short",
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
 }
 
@@ -19,10 +17,7 @@ export default function DateResults({ data }: { data: DateResultsResponse }) {
           className={`p-3 rounded-lg border ${i === 0 ? "border-brand-300 bg-brand-50" : "bg-white border-gray-200"}`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              {fmt(d.date)}
-              {d.label && ` — ${d.label}`}
-            </span>
+            <span className="text-sm font-medium">{fmt(d.date)}</span>
             <span className="text-sm font-semibold text-brand-600">
               {d.count} available
             </span>

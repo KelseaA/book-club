@@ -113,9 +113,8 @@ async function main() {
             nextMonth.getMonth(),
             5,
             19,
-            0,
+            30,
           ),
-          label: "Saturday evening",
         },
         {
           monthId: currentMonth.id,
@@ -124,9 +123,8 @@ async function main() {
             nextMonth.getMonth(),
             12,
             19,
-            0,
+            30,
           ),
-          label: "Saturday evening",
         },
         {
           monthId: currentMonth.id,
@@ -135,9 +133,8 @@ async function main() {
             nextMonth.getMonth(),
             19,
             19,
-            0,
+            30,
           ),
-          label: "Saturday evening",
         },
       ],
     });
@@ -145,9 +142,6 @@ async function main() {
   }
 
   // ── Past month (FINALIZED) ────────────────────────────────────────────────
-  const pastMonthKey =
-    `${now.getFullYear()}-${String(now.getMonth()).padStart(2, "0")}` ||
-    `${now.getFullYear() - 1}-12`;
   const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
   const m = now.getMonth() === 0 ? 12 : now.getMonth();
   const pastKey = `${y}-${String(m).padStart(2, "0")}`;
@@ -161,7 +155,7 @@ async function main() {
       status: MonthStatus.FINALIZED,
       resultsVisible: true,
       revealedAt: new Date(),
-      finalMeetingDate: new Date(y, m - 1, 15, 19, 0),
+      finalMeetingDate: new Date(y, m - 1, 15, 19, 30),
     },
   });
 

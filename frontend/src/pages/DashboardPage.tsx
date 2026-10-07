@@ -141,9 +141,8 @@ export default function DashboardPage() {
                 weekday: "long",
                 month: "long",
                 day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
+              })}{" "}
+              at 7:30 PM
             </p>
           )}
           {/* Host address — only shown if the host has filled it in */}
@@ -376,13 +375,8 @@ export default function DashboardPage() {
                           weekday: "short",
                           month: "short",
                           day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
                         })}
                       </p>
-                      {d.label && (
-                        <p className="text-xs text-gray-400">{d.label}</p>
-                      )}
                     </div>
                     {isHost && !isFinalized && (
                       <div className="flex gap-2">

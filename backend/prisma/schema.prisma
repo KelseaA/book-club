@@ -124,7 +124,6 @@ model DateOption {
   month   BookClubMonth @relation(fields: [monthId], references: [id])
 
   date     DateTime
-  label    String?
 
   createdAt DateTime @default(now())
 

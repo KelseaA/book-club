@@ -141,7 +141,7 @@ export function useDeleteBook(monthKey: string) {
 export function useAddDate(monthKey: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { date: string; label?: string }) =>
+    mutationFn: (body: { date: string }) =>
       api.post(`/months/${monthKey}/dates`, body),
     onSuccess: () => invalidateMonth(qc, monthKey),
   });
@@ -150,7 +150,7 @@ export function useAddDate(monthKey: string) {
 export function useUpdateDate(monthKey: string, dateId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { date: string; label?: string }) =>
+    mutationFn: (body: { date: string }) =>
       api.put(`/months/${monthKey}/dates/${dateId}`, body),
     onSuccess: () => invalidateMonth(qc, monthKey),
   });

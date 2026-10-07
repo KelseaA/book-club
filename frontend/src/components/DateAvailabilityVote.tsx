@@ -12,8 +12,6 @@ function formatDate(iso: string) {
     weekday: "short",
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
 }
 
@@ -45,10 +43,7 @@ export default function DateAvailabilityVote({
             checked={selected.has(d.id)}
             onChange={() => toggle(d.id)}
           />
-          <span className="text-sm">
-            {formatDate(d.date)}
-            {d.label && <span className="text-gray-400 ml-1">— {d.label}</span>}
-          </span>
+          <span className="text-sm">{formatDate(d.date)}</span>
         </label>
       ))}
     </div>
