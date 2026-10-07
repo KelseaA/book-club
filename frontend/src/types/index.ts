@@ -71,9 +71,8 @@ export interface BookVoteRankRow {
 }
 
 export interface BookVoteStatus {
-  hasSubmittedBookVote: boolean;
+  hasVoted: boolean;
   bookVote: { id: number; ranks: BookVoteRankRow[] } | null;
-  hasSubmittedDateVote: boolean;
   dateSelections: { id: number; dateOptionId: number }[];
 }
 

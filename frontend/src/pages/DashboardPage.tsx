@@ -6,8 +6,7 @@ import {
   useDateResults,
   useDeleteBook,
   useDeleteDate,
-  useSubmitBookVote,
-  useSubmitDateVote,
+  useSubmitVote,
   useOpenVoting,
 } from "../hooks/useBookClub";
 import { useAuth } from "../hooks/useAuth";
@@ -57,8 +56,7 @@ export default function DashboardPage() {
 
   const deleteBook = useDeleteBook(month?.monthKey ?? "");
   const deleteDate = useDeleteDate(month?.monthKey ?? "");
-  const submitBookVote = useSubmitBookVote(month?.monthKey ?? "");
-  const submitDateVote = useSubmitDateVote(month?.monthKey ?? "");
+  const submitVote = useSubmitVote(month?.monthKey ?? "");
   const openVotingMutation = useOpenVoting(month?.monthKey ?? "");
 
   const canSeeResults = month
@@ -82,25 +80,16 @@ export default function DashboardPage() {
   const isSetup = month.status === "SETUP";
   const hasVotes = month._count.bookVotes > 0;
 
-  const isPendingVote = submitBookVote.isPending || submitDateVote.isPending;
-  const voteError = submitBookVote.error || submitDateVote.error;
-
-  function handleSubmitVotes() {
-    // Submit book vote if not already submitted and there are books to rank
-    if (!voteStatus?.hasSubmittedBookVote && month!.bookOptions.length > 0) {
-      const ranks =
-        bookRanks.length > 0
-          ? bookRanks
-          : month!.bookOptions.map((b, i) => ({
-              bookOptionId: b.id,
-              rank: i + 1,
-            }));
-      submitBookVote.mutate(ranks);
-    }
-    // Submit date vote if not already submitted
-    if (!voteStatus?.hasSubmittedDateVote) {
-      submitDateVote.mutate(selectedDateIds);
-    }
+  function handleSubmitVote() {
+    // If the member never dragged anything, the displayed order is their ballot
+    const ranks =
+      bookRanks.length > 0
+        ? bookRanks
+        : month!.bookOptions.map((b, i) => ({
+            bookOptionId: b.id,
+            rank: i + 1,
+          }));
+    submitVote.mutate({ ranks, dateOptionIds: selectedDateIds });
   }
 
   return (
@@ -296,22 +285,26 @@ export default function DashboardPage() {
                           </>
                         ) : (
                           <>
-                            <button
-                              className="text-xs text-brand-600 hover:underline"
-                              onClick={() => {
-                                setEditingBook(book);
-                                setBookFormMode("none");
-                              }}
-                            >
-                              Edit
-                            </button>
                             {!hasVotes && (
-                              <button
-                                className="text-xs text-red-500 hover:underline"
-                                onClick={() => setConfirmDeleteBookId(book.id)}
-                              >
-                                Remove
-                              </button>
+                              <>
+                                <button
+                                  className="text-xs text-brand-600 hover:underline"
+                                  onClick={() => {
+                                    setEditingBook(book);
+                                    setBookFormMode("none");
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="text-xs text-red-500 hover:underline"
+                                  onClick={() =>
+                                    setConfirmDeleteBookId(book.id)
+                                  }
+                                >
+                                  Remove
+                                </button>
+                              </>
                             )}
                           </>
                         )}
@@ -342,6 +335,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-semibold">Meeting Dates</h2>
             {isHost &&
               !isFinalized &&
+              !hasVotes &&
               month.dateOptions.length < 4 &&
               dateFormMode === "none" && (
                 <button
@@ -378,7 +372,7 @@ export default function DashboardPage() {
                         })}
                       </p>
                     </div>
-                    {isHost && !isFinalized && (
+                    {isHost && !isFinalized && !hasVotes && (
                       <div className="flex gap-2">
                         {confirmDeleteDateId === d.id ? (
                           <>
@@ -438,71 +432,65 @@ export default function DashboardPage() {
         <section className="card space-y-4">
           <h2 className="text-lg font-semibold">Your Vote</h2>
 
-          {/* Book ballot */}
-          {voteStatus?.hasSubmittedBookVote ? (
+          {!voteStatus ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : voteStatus.hasVoted ? (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-              Book ballot submitted — ranked {voteStatus.bookVote?.ranks.length}{" "}
-              book(s)
+              Vote submitted — thanks! Votes are locked once submitted.
             </div>
           ) : (
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                Rank the books (drag to reorder):
-              </p>
-              <RankedBookVote
-                monthKey={month.monthKey}
-                books={month.bookOptions}
-                onRanksChange={setBookRanks}
-              />
-            </div>
-          )}
-
-          {month.dateOptions.length > 0 && (
             <>
-              <hr className="border-gray-200" />
-              {voteStatus?.hasSubmittedDateVote ? (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-                  Date availability submitted
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Select dates you're available:
-                  </p>
-                  <DateAvailabilityVote
-                    monthKey={month.monthKey}
-                    dateOptions={month.dateOptions}
-                    onSelectionChange={setSelectedDateIds}
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Combined submit */}
-          {(!voteStatus?.hasSubmittedBookVote ||
-            !voteStatus?.hasSubmittedDateVote) && (
-            <div className="pt-2 space-y-2">
-              <hr className="border-gray-200" />
-              {voteError && (
-                <p className="error-text">{(voteError as Error).message}</p>
-              )}
-              <button
-                className="btn-primary w-full"
-                onClick={handleSubmitVotes}
-                disabled={isPendingVote || selectedDateIds.length === 0}
-              >
-                {isPendingVote ? "Submitting…" : "Submit Vote"}
-              </button>
-              {selectedDateIds.length === 0 && month.dateOptions.length > 0 && (
-                <p className="text-xs text-gray-400 text-center">
-                  Select at least one date to submit.
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Rank the books (drag to reorder):
                 </p>
+                <RankedBookVote
+                  monthKey={month.monthKey}
+                  books={month.bookOptions}
+                  onRanksChange={setBookRanks}
+                />
+              </div>
+
+              {month.dateOptions.length > 0 && (
+                <>
+                  <hr className="border-gray-200" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Select dates you're available:
+                    </p>
+                    <DateAvailabilityVote
+                      monthKey={month.monthKey}
+                      dateOptions={month.dateOptions}
+                      onSelectionChange={setSelectedDateIds}
+                    />
+                  </div>
+                </>
               )}
-              <p className="text-xs text-gray-400 text-center">
-                Your vote is locked after submission and cannot be changed.
-              </p>
-            </div>
+
+              <div className="pt-2 space-y-2">
+                <hr className="border-gray-200" />
+                {submitVote.error && (
+                  <p className="error-text">{submitVote.error.message}</p>
+                )}
+                <button
+                  className="btn-primary w-full"
+                  onClick={handleSubmitVote}
+                  disabled={submitVote.isPending}
+                >
+                  {submitVote.isPending ? "Submitting…" : "Submit Vote"}
+                </button>
+                {selectedDateIds.length === 0 &&
+                  month.dateOptions.length > 0 && (
+                    <p className="text-xs text-gray-400 text-center">
+                      No dates selected — that tells the host none of them work
+                      for you.
+                    </p>
+                  )}
+                <p className="text-xs text-gray-400 text-center">
+                  Your vote is locked after submission and cannot be changed.
+                </p>
+              </div>
+            </>
           )}
         </section>
       )}

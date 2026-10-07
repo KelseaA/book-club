@@ -16,7 +16,10 @@ async function getMonthAndAssertHost(
 ) {
   const month = await prisma.bookClubMonth.findUnique({
     where: { monthKey },
-    include: { dateOptions: true },
+    include: {
+      dateOptions: true,
+      _count: { select: { bookVotes: true } },
+    },
   });
   if (!month) {
     res.status(404).json({ error: "Month not found" });
@@ -28,6 +31,15 @@ async function getMonthAndAssertHost(
   }
   if (month.status === FINALIZED) {
     res.status(400).json({ error: "Month is finalized" });
+    return null;
+  }
+  // Once anyone has voted, the date list is frozen: an added date couldn't be
+  // picked by earlier voters, and an edited one would change what they chose.
+  // (Every vote creates a BookVote, so its count covers date voting too.)
+  if (month._count.bookVotes > 0) {
+    res.status(400).json({
+      error: "Votes have already been cast — date options cannot be changed",
+    });
     return null;
   }
   return month;

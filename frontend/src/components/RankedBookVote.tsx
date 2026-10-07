@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -79,6 +79,25 @@ interface Props {
 export default function RankedBookVote({ books, onRanksChange }: Props) {
   const [ordered, setOrdered] = useState<BookOption[]>(books);
 
+  // If the host edits the book list while this page is open, keep the
+  // member's existing order, drop removed books, and append new ones —
+  // the backend rejects ballots that don't rank every current book
+  useEffect(() => {
+    setOrdered((prev) => {
+      const byId = new Map(books.map((b) => [b.id, b]));
+      const kept = prev
+        .filter((b) => byId.has(b.id))
+        .map((b) => byId.get(b.id)!);
+      const added = books.filter((b) => !prev.some((p) => p.id === b.id));
+      return [...kept, ...added];
+    });
+  }, [books]);
+
+  // Report the current order as ranks (rank 1 = top) to the parent
+  useEffect(() => {
+    onRanksChange(ordered.map((b, i) => ({ bookOptionId: b.id, rank: i + 1 })));
+  }, [ordered, onRanksChange]);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -92,11 +111,7 @@ export default function RankedBookVote({ books, onRanksChange }: Props) {
       setOrdered((items) => {
         const oldIndex = items.findIndex((b) => b.id === active.id);
         const newIndex = items.findIndex((b) => b.id === over.id);
-        const next = arrayMove(items, oldIndex, newIndex);
-        onRanksChange(
-          next.map((b, i) => ({ bookOptionId: b.id, rank: i + 1 })),
-        );
-        return next;
+        return arrayMove(items, oldIndex, newIndex);
       });
     }
   }

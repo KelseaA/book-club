@@ -6,8 +6,10 @@ const FINALIZED = "FINALIZED";
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
-// bookRanks: array of { bookOptionId, rank } — rank 1 = top choice
-export const submitBookVoteSchema = z.object({
+// A member's whole vote, submitted once:
+// ranks — every book option in order of preference (rank 1 = top choice)
+// dateOptionIds — the dates they're available for (may be empty)
+export const submitVoteSchema = z.object({
   ranks: z
     .array(
       z.object({
@@ -16,24 +18,29 @@ export const submitBookVoteSchema = z.object({
       }),
     )
     .min(1),
-});
-
-// dateSelections: array of dateOptionIds the member is available for
-export const submitDateVoteSchema = z.object({
   dateOptionIds: z.array(z.number().int().positive()),
 });
 
-// ── Book vote ─────────────────────────────────────────────────────────────────
+// ── Submit vote ───────────────────────────────────────────────────────────────
 
-export async function submitBookVote(req: Request, res: Response) {
+/**
+ * Saves the member's book ballot and date availability together in one
+ * transaction, so a vote can't end up half-submitted.
+ *
+ * The BookVote row doubles as the "this member has voted" marker. That's what
+ * locks the date selection too, even when the member picked no dates (which
+ * leaves no DateSelection rows to detect).
+ */
+export async function submitVote(req: Request, res: Response) {
   const { monthKey } = req.params;
-  const { ranks } = req.body as {
+  const { ranks, dateOptionIds } = req.body as {
     ranks: { bookOptionId: number; rank: number }[];
+    dateOptionIds: number[];
   };
 
   const month = await prisma.bookClubMonth.findUnique({
     where: { monthKey },
-    include: { bookOptions: true },
+    include: { bookOptions: true, dateOptions: true },
   });
   if (!month) return res.status(404).json({ error: "Month not found" });
   if (month.status === "SETUP") {
@@ -45,27 +52,42 @@ export async function submitBookVote(req: Request, res: Response) {
       .json({ error: "Month is finalized; voting is closed" });
   }
 
-  // Prevent duplicate ballot
+  // Prevent duplicate vote
   const existing = await prisma.bookVote.findUnique({
     where: { monthId_memberId: { monthId: month.id, memberId: req.memberId! } },
   });
   if (existing) {
-    return res.status(409).json({
-      error: "You have already submitted your book ballot for this month",
+    return res.status(409).json({ error: "You have already voted this month" });
+  }
+
+  // Borda count assumes a complete ranking: each of the N books appears
+  // exactly once, with ranks 1..N
+  const bookIds = new Set(month.bookOptions.map((b) => b.id));
+  const rankedIds = new Set(ranks.map((r) => r.bookOptionId));
+  const rankValues = new Set(ranks.map((r) => r.rank));
+  const n = bookIds.size;
+  const isCompleteRanking =
+    ranks.length === n &&
+    rankedIds.size === n &&
+    [...rankedIds].every((id) => bookIds.has(id)) &&
+    rankValues.size === n &&
+    [...rankValues].every((r) => r >= 1 && r <= n);
+  if (!isCompleteRanking) {
+    return res.status(400).json({
+      error:
+        "Your ballot must rank every book exactly once. The book list may have changed — refresh and try again.",
     });
   }
 
-  // Validate that all bookOptionIds belong to this month
-  const validIds = new Set(month.bookOptions.map((b: { id: number }) => b.id));
-  for (const r of ranks) {
-    if (!validIds.has(r.bookOptionId)) {
-      return res.status(400).json({
-        error: `bookOptionId ${r.bookOptionId} does not belong to this month`,
-      });
-    }
+  const validDateIds = new Set(month.dateOptions.map((d) => d.id));
+  const selectedDateIds = [...new Set(dateOptionIds)];
+  if (!selectedDateIds.every((id) => validDateIds.has(id))) {
+    return res.status(400).json({
+      error:
+        "One of your selected dates is no longer an option. Refresh and try again.",
+    });
   }
 
-  // Create ballot and ranks in a transaction
   const vote = await prisma.$transaction(async (tx) => {
     const ballot = await tx.bookVote.create({
       data: { monthId: month.id, memberId: req.memberId! },
@@ -77,68 +99,16 @@ export async function submitBookVote(req: Request, res: Response) {
         rank: r.rank,
       })),
     });
-    return ballot;
-  });
-
-  return res.status(201).json({ bookVoteId: vote.id });
-}
-
-// ── Date vote ─────────────────────────────────────────────────────────────────
-
-export async function submitDateVote(req: Request, res: Response) {
-  const { monthKey } = req.params;
-  const { dateOptionIds } = req.body as { dateOptionIds: number[] };
-
-  const month = await prisma.bookClubMonth.findUnique({
-    where: { monthKey },
-    include: { dateOptions: true },
-  });
-  if (!month) return res.status(404).json({ error: "Month not found" });
-  if (month.status === "SETUP") {
-    return res.status(400).json({ error: "Voting has not been opened yet" });
-  }
-  if (month.status === FINALIZED) {
-    return res
-      .status(400)
-      .json({ error: "Month is finalized; voting is closed" });
-  }
-
-  // Check if member already submitted date availability
-  // We treat any existing DateSelection for this member+month as a prior submission
-  const existingSelections = await prisma.dateSelection.findMany({
-    where: {
-      memberId: req.memberId!,
-      dateOption: { monthId: month.id },
-    },
-  });
-  if (existingSelections.length > 0) {
-    return res.status(409).json({
-      error: "You have already submitted your date availability for this month",
-    });
-  }
-
-  // Validate dateOptionIds belong to this month
-  const validDateIds = new Set(
-    month.dateOptions.map((d: { id: number }) => d.id),
-  );
-  for (const id of dateOptionIds) {
-    if (!validDateIds.has(id)) {
-      return res
-        .status(400)
-        .json({ error: `dateOptionId ${id} does not belong to this month` });
-    }
-  }
-
-  if (dateOptionIds.length > 0) {
-    await prisma.dateSelection.createMany({
-      data: dateOptionIds.map((dateOptionId) => ({
+    await tx.dateSelection.createMany({
+      data: selectedDateIds.map((dateOptionId) => ({
         dateOptionId,
         memberId: req.memberId!,
       })),
     });
-  }
+    return ballot;
+  });
 
-  return res.status(201).json({ ok: true });
+  return res.status(201).json({ bookVoteId: vote.id });
 }
 
 // ── Results ───────────────────────────────────────────────────────────────────
@@ -262,9 +232,8 @@ export async function getMyVoteStatus(req: Request, res: Response) {
   });
 
   return res.json({
-    hasSubmittedBookVote: !!bookVote,
+    hasVoted: !!bookVote,
     bookVote: bookVote ?? null,
-    hasSubmittedDateVote: dateSelections.length > 0,
     dateSelections,
   });
 }

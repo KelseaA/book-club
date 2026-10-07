@@ -89,10 +89,18 @@ export async function setHost(req: Request, res: Response) {
 /** Host opens voting, advancing month from SETUP → VOTING */
 export async function openVoting(req: Request, res: Response) {
   const { monthKey } = req.params;
-  const month = await prisma.bookClubMonth.findUnique({ where: { monthKey } });
+  const month = await prisma.bookClubMonth.findUnique({
+    where: { monthKey },
+    include: { _count: { select: { bookOptions: true } } },
+  });
   if (!month) return res.status(404).json({ error: "Month not found" });
   if (month.hostMemberId !== req.memberId) {
     return res.status(403).json({ error: "Only the host can open voting" });
+  }
+  if (month._count.bookOptions === 0) {
+    return res
+      .status(400)
+      .json({ error: "Add at least one book before opening voting" });
   }
   if (month.status !== "SETUP") {
     return res

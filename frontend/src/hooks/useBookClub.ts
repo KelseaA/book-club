@@ -175,23 +175,18 @@ export function useMyVoteStatus(monthKey: string) {
   });
 }
 
-export function useSubmitBookVote(monthKey: string) {
+export function useSubmitVote(monthKey: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ranks: { bookOptionId: number; rank: number }[]) =>
-      api.post(`/months/${monthKey}/votes/books`, { ranks }),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["voteStatus", monthKey] }),
-  });
-}
-
-export function useSubmitDateVote(monthKey: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (dateOptionIds: number[]) =>
-      api.post(`/months/${monthKey}/votes/dates`, { dateOptionIds }),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["voteStatus", monthKey] }),
+    mutationFn: (body: {
+      ranks: { bookOptionId: number; rank: number }[];
+      dateOptionIds: number[];
+    }) => api.post(`/months/${monthKey}/votes`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["voteStatus", monthKey] });
+      // Vote count gates host controls, and the host may be watching results
+      invalidateMonth(qc, monthKey);
+    },
   });
 }
 
