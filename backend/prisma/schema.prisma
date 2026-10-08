@@ -16,25 +16,30 @@ enum MeetingStatus {
 }
 
 model Member {
-  id            Int     @id @default(autoincrement())
-  name          String
-  email         String  @unique
-  passwordHash  String
+  id             Int     @id @default(autoincrement())
+  name           String
+  email          String  @unique
+  passwordHash   String
+  // Bumped on password reset/change; login cookies carry the version they
+  // were issued with, so bumping it signs out every existing session
+  sessionVersion Int     @default(0)
   // Address fields for profile purposes
-  streetAddress String?
-  city          String?
-  state         String?
-  zipCode       String?
-  country       String?
+  streetAddress  String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Meetings this member is hosting
-  hostedMeetings Meeting[]       @relation("HostMember")
-  bookVotes      BookVote[]
-  dateSelections DateSelection[]
-  feedback       Feedback[]
+  hostedMeetings      Meeting[]            @relation("HostMember")
+  bookVotes           BookVote[]
+  dateSelections      DateSelection[]
+  feedback            Feedback[]
+  joinLinksCreated    JoinLink[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 // One round of the book club: propose books and dates, vote, then finalize.
@@ -154,4 +159,29 @@ model Feedback {
   member    Member   @relation(fields: [memberId], references: [id])
   message   String
   createdAt DateTime @default(now())
+}
+
+// The club's shareable join link. Registration requires a valid one, and it
+// can be used any number of times. Only the newest non-revoked link works;
+// "resetting" the link revokes it and creates a new one. Old rows are kept
+// as history.
+model JoinLink {
+  id          Int       @id @default(autoincrement())
+  token       String    @unique
+  createdById Int?
+  createdBy   Member?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// One-time password reset link sent by email. Only a SHA-256 hash of the
+// token is stored, so a database leak can't be used to reset passwords.
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
+  memberId  Int
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }

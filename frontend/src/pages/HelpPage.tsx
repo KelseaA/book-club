@@ -26,7 +26,7 @@ const steps: Step[] = [
   },
   {
     title: "Opening Voting",
-    body: 'Once the host is happy with the proposals, they click "Open Voting for All Members." After that, no more changes to books or dates can be made and every member can submit their ballot.',
+    body: 'While the host is setting things up, only they can see the books and dates, so they can make changes freely. Once they\'re happy, they click "Open Voting for All Members" and everyone can see the options and vote. After the first vote comes in, the books and dates are locked.',
   },
   {
     title: "Voting",
@@ -41,8 +41,12 @@ const steps: Step[] = [
     body: "Every past meeting lives in the Archive, accessible from the top menu. You can browse previous picks and how the group ranked the books any time.",
   },
   {
+    title: "Members & inviting people",
+    body: "The Members page lists everyone in the club. Book Club is invite-only: to bring someone in, copy the invite link from the Members page and text it to them. The same link works for everyone. If it ends up somewhere it shouldn't, any member can reset it — people who already joined aren't affected.",
+  },
+  {
     title: "Your Profile",
-    body: "Click your name in the top menu to update your display name, home address, or password. Your address is shown to other members on the dashboard when you are hosting the meeting.",
+    body: 'Click your name in the top menu to update your display name, email, home address, or password. Your address is shown to other members on the dashboard when you are hosting the meeting. Forgot your password? Use the "Forgot password?" link on the sign-in page and we\'ll email you a reset link.',
   },
 ];
 

@@ -59,6 +59,14 @@ export default function LoginPage() {
             )}
           </div>
           {login.isError && <p className="error-text">{login.error.message}</p>}
+          <p className="text-right -mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-brand-600 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </p>
           <button
             type="submit"
             className="btn-primary w-full"
@@ -68,10 +76,7 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="text-sm text-center text-gray-500 mt-4">
-          No account?{" "}
-          <Link to="/register" className="text-brand-600 hover:underline">
-            Register
-          </Link>
+          New here? Ask a member for the club's invite link.
         </p>
       </div>
     </div>

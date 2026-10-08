@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma";
+import { SESSION_COOKIE, parseSessionCookie } from "../lib/session";
 
 // Extend Express Request to carry the authenticated member
 declare global {
@@ -11,30 +12,28 @@ declare global {
 }
 
 /**
- * Reads the memberId from the signed session cookie and attaches it to req.
- * Returns 401 if no valid session is found.
+ * Reads the member from the signed session cookie and attaches it to req.
+ * Returns 401 if there's no valid session — including when the member's
+ * sessionVersion has changed since the cookie was issued (password reset).
  */
 export async function requireAuth(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
-  const raw = req.signedCookies?.memberId;
-  if (!raw) {
+  const session = parseSessionCookie(req.signedCookies?.[SESSION_COOKIE]);
+  if (!session) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  const id = parseInt(raw, 10);
-  if (isNaN(id)) {
-    return res.status(401).json({ error: "Invalid session" });
+  const member = await prisma.member.findUnique({
+    where: { id: session.memberId },
+    select: { sessionVersion: true },
+  });
+  if (!member || member.sessionVersion !== session.sessionVersion) {
+    return res.status(401).json({ error: "Session expired — please sign in" });
   }
 
-  // Verify member still exists
-  const member = await prisma.member.findUnique({ where: { id } });
-  if (!member) {
-    return res.status(401).json({ error: "Session invalid" });
-  }
-
-  req.memberId = id;
+  req.memberId = session.memberId;
   next();
 }

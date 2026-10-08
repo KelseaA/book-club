@@ -2,9 +2,16 @@ import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
+import { publicMember } from "./authController";
+import { SALT_ROUNDS } from "../services/passwordReset";
+import { setSessionCookie, clearSessionCookie } from "../lib/session";
+import { appUrl } from "../lib/tokens";
+import { getOrCreateJoinLink, resetJoinLink } from "../services/joinLink";
 
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  // Password reset links go to this address, so changing it needs the password
+  email: z.string().email().optional(),
   streetAddress: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -19,13 +26,13 @@ export async function getProfile(req: Request, res: Response) {
     where: { id: req.memberId! },
   });
   if (!member) return res.status(404).json({ error: "Not found" });
-  const { passwordHash: _, ...safe } = member;
-  return res.json(safe);
+  return res.json(publicMember(member));
 }
 
 export async function updateProfile(req: Request, res: Response) {
   const {
     name,
+    email,
     streetAddress,
     city,
     state,
@@ -40,30 +47,47 @@ export async function updateProfile(req: Request, res: Response) {
   });
   if (!member) return res.status(404).json({ error: "Not found" });
 
-  let passwordHash = member.passwordHash;
-  if (newPassword) {
+  const changingEmail = email !== undefined && email !== member.email;
+  if (newPassword || changingEmail) {
     if (!currentPassword) {
-      return res
-        .status(400)
-        .json({ error: "currentPassword required to set a new password" });
+      return res.status(400).json({
+        error: "Enter your current password to change your email or password",
+      });
     }
     const match = await bcrypt.compare(currentPassword, member.passwordHash);
     if (!match) {
       return res.status(400).json({ error: "Current password is incorrect" });
     }
-    passwordHash = await bcrypt.hash(newPassword, 12);
+  }
+  if (changingEmail) {
+    const taken = await prisma.member.findUnique({ where: { email } });
+    if (taken) return res.status(409).json({ error: "Email already in use" });
   }
 
   const updated = await prisma.member.update({
     where: { id: req.memberId! },
-    data: { name, streetAddress, city, state, zipCode, country, passwordHash },
+    data: {
+      name,
+      email: changingEmail ? email : undefined,
+      streetAddress,
+      city,
+      state,
+      zipCode,
+      country,
+      // A new password signs out every other session (see lib/session.ts)
+      ...(newPassword && {
+        passwordHash: await bcrypt.hash(newPassword, SALT_ROUNDS),
+        sessionVersion: { increment: 1 },
+      }),
+    },
   });
 
-  const { passwordHash: _, ...safe } = updated;
-  return res.json(safe);
+  // Keep this browser signed in with the new session version
+  if (newPassword) setSessionCookie(res, updated);
+  return res.json(publicMember(updated));
 }
 
-/** List all members (name + id only) for HostSelector component */
+/** List all members (name + id only) for HostSelector and the Members page */
 export async function listMembers(_req: Request, res: Response) {
   const members = await prisma.member.findMany({
     select: { id: true, name: true },
@@ -104,6 +128,18 @@ export async function deleteAccount(req: Request, res: Response) {
     await tx.member.delete({ where: { id: memberId } });
   });
 
-  res.clearCookie("memberId");
+  clearSessionCookie(res);
   return res.json({ ok: true });
+}
+
+/** GET /api/members/join-link — the club's current join link (created on first view) */
+export async function getJoinLink(req: Request, res: Response) {
+  const link = await getOrCreateJoinLink(req.memberId!);
+  return res.json({ url: appUrl(`/join/${link.token}`) });
+}
+
+/** POST /api/members/join-link/reset — any member can replace a leaked link */
+export async function resetJoinLinkHandler(req: Request, res: Response) {
+  const link = await resetJoinLink(req.memberId!);
+  return res.json({ url: appUrl(`/join/${link.token}`) });
 }

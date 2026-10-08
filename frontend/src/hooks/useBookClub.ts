@@ -42,6 +42,24 @@ export function useMembers() {
   });
 }
 
+// ── Join link ─────────────────────────────────────────────────────────────────
+
+/** The club's shareable join link (the backend creates it on first view) */
+export function useJoinLink() {
+  return useQuery<{ url: string }, Error>({
+    queryKey: ["joinLink"],
+    queryFn: () => api.get("/members/join-link"),
+  });
+}
+
+export function useResetJoinLink() {
+  const qc = useQueryClient();
+  return useMutation<{ url: string }, Error, undefined>({
+    mutationFn: () => api.post("/members/join-link/reset"),
+    onSuccess: (data) => qc.setQueryData(["joinLink"], data),
+  });
+}
+
 // ── Meeting mutations ─────────────────────────────────────────────────────────
 
 function useMeetingMutation<TVar>(fn: (v: TVar) => Promise<Meeting>) {

@@ -15,6 +15,8 @@ async function main() {
   await prisma.bookVote.deleteMany();
   await prisma.dateSelection.deleteMany();
   await prisma.feedback.deleteMany();
+  await prisma.passwordResetToken.deleteMany();
+  await prisma.joinLink.deleteMany();
   await prisma.bookOption.deleteMany();
   await prisma.dateOption.deleteMany();
   await prisma.meeting.deleteMany();

@@ -8,6 +8,9 @@ import ArchiveListPage from "./pages/ArchiveListPage";
 import ArchiveDetailPage from "./pages/ArchiveDetailPage";
 import ProfilePage from "./pages/ProfilePage";
 import HelpPage from "./pages/HelpPage";
+import MembersPage from "./pages/MembersPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { member, isLoading } = useAuth();
@@ -26,7 +29,11 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Registration is invite-only: the join link carries the token */}
+        <Route path="/join/:token" element={<RegisterPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/"
           element={
@@ -38,6 +45,7 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="archive" element={<ArchiveListPage />} />
+          <Route path="members" element={<MembersPage />} />
           <Route path="archive/:meetingId" element={<ArchiveDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="help" element={<HelpPage />} />

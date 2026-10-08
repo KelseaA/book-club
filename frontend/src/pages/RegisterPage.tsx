@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import type { Member } from "../types";
 
@@ -19,6 +19,13 @@ interface FormValues {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  // Present when arriving via the club's join link (/join/:token)
+  const { token } = useParams<{ token: string }>();
+  const joinCheck = useQuery({
+    queryKey: ["joinLink", token],
+    queryFn: () => api.get<{ valid: boolean }>(`/auth/join/${token}`),
+    enabled: !!token,
+  });
   const {
     register,
     handleSubmit,
@@ -28,17 +35,50 @@ export default function RegisterPage() {
 
   const reg = useMutation<Member, Error, FormValues>({
     mutationFn: ({ confirmPassword: _c, ...data }) =>
-      api.post("/auth/register", data),
+      api.post("/auth/register", { ...data, joinToken: token }),
     onSuccess: (member) => {
       qc.setQueryData(["me"], member);
       navigate("/dashboard");
     },
   });
 
+  // Without a working join link there's nothing to fill in — explain instead
+  if (!token || joinCheck.data?.valid === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="card w-full max-w-md text-center space-y-3">
+          <h1 className="text-2xl font-bold">Join Book Club</h1>
+          <p className="text-gray-600">
+            {token
+              ? "This invite link isn't valid anymore."
+              : "Book Club is invite-only."}{" "}
+            Ask a member to send you the club's invite link.
+          </p>
+          <p className="text-sm text-gray-500">
+            Already a member?{" "}
+            <Link to="/login" className="text-brand-600 hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (joinCheck.isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-500">
+        Loading…
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-10">
       <div className="card w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Create Account</h1>
+        <h1 className="text-2xl font-bold mb-1 text-center">Join Book Club</h1>
+        <p className="text-sm text-gray-500 text-center mb-6">
+          You've been invited — create your account below.
+        </p>
         <form
           onSubmit={handleSubmit((v) => reg.mutate(v))}
           className="space-y-4"

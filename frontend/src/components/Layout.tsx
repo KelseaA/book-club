@@ -34,6 +34,14 @@ export default function Layout() {
               Archive
             </NavLink>
             <NavLink
+              to="/members"
+              className={({ isActive }) =>
+                isActive ? "underline underline-offset-4" : "hover:underline"
+              }
+            >
+              Members
+            </NavLink>
+            <NavLink
               to="/help"
               className={({ isActive }) =>
                 isActive ? "underline underline-offset-4" : "hover:underline"

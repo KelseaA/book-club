@@ -1,7 +1,18 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { register, login, logout, me } from "../controllers/authController";
-import { registerSchema, loginSchema } from "../controllers/authController";
+import {
+  register,
+  login,
+  logout,
+  me,
+  checkJoinLink,
+  forgotPassword,
+  resetPassword,
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "../controllers/authController";
 import { validate } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
 
@@ -23,7 +34,28 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const resetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: { error: "Too many reset attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.post("/register", registerLimiter, validate(registerSchema), register);
+router.get("/join/:token", registerLimiter, checkJoinLink);
+router.post(
+  "/forgot-password",
+  resetLimiter,
+  validate(forgotPasswordSchema),
+  forgotPassword,
+);
+router.post(
+  "/reset-password",
+  resetLimiter,
+  validate(resetPasswordSchema),
+  resetPassword,
+);
 router.post("/login", loginLimiter, validate(loginSchema), login);
 router.post("/logout", logout);
 router.get("/me", requireAuth, me);

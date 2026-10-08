@@ -8,6 +8,7 @@ import type { Member } from "../types";
 
 interface FormValues {
   name: string;
+  email: string;
   streetAddress: string;
   city: string;
   state: string;
@@ -31,6 +32,7 @@ export default function ProfilePage() {
   } = useForm<FormValues>({
     defaultValues: {
       name: member?.name ?? "",
+      email: member?.email ?? "",
       streetAddress: member?.streetAddress ?? "",
       city: member?.city ?? "",
       state: member?.state ?? "",
@@ -45,22 +47,25 @@ export default function ProfilePage() {
     mutationFn: (data) => {
       const payload: Record<string, string> = {
         name: data.name,
+        email: data.email,
         streetAddress: data.streetAddress,
         city: data.city,
         state: data.state,
         zipCode: data.zipCode,
         country: data.country,
       };
-      if (data.newPassword) {
+      // The backend needs the current password to change email or password
+      if (data.newPassword || data.email !== member?.email) {
         payload.currentPassword = data.currentPassword;
-        payload.newPassword = data.newPassword;
       }
+      if (data.newPassword) payload.newPassword = data.newPassword;
       return api.put("/members/me", payload);
     },
     onSuccess: (updated) => {
       qc.setQueryData(["me"], updated);
       reset({
         name: updated.name,
+        email: updated.email,
         streetAddress: updated.streetAddress ?? "",
         city: updated.city ?? "",
         state: updated.state ?? "",
@@ -96,7 +101,21 @@ export default function ProfilePage() {
             />
             {errors.name && <p className="error-text">{errors.name.message}</p>}
           </div>
-          <p className="text-sm text-gray-400">Email: {member?.email}</p>
+          <div>
+            <label className="label">Email *</label>
+            <input
+              className="input"
+              type="email"
+              autoComplete="email"
+              {...register("email", { required: "Required" })}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Password reset links are sent here.
+            </p>
+            {errors.email && (
+              <p className="error-text">{errors.email.message}</p>
+            )}
+          </div>
           <hr className="border-gray-200" />
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Mailing Address
@@ -127,7 +146,10 @@ export default function ProfilePage() {
           </div>
           <hr className="border-gray-200" />
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Change Password (optional)
+            Password
+          </p>
+          <p className="text-xs text-gray-500 -mt-2">
+            Enter your current password to change your email or password.
           </p>
           <div>
             <label className="label">Current Password</label>
