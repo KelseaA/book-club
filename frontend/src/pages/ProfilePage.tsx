@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import EmailNotificationsField from "../components/EmailNotificationsField";
 import { useAuth } from "../hooks/useAuth";
 import type { Member } from "../types";
 
@@ -120,22 +121,9 @@ export default function ProfilePage() {
               <p className="error-text">{errors.email.message}</p>
             )}
           </div>
-          <label className="flex items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5 w-4 h-4 accent-brand-500"
-              {...register("emailNotifications")}
-            />
-            <span>
-              <span className="font-medium text-gray-800">
-                Email me about meetings
-              </span>
-              <span className="block text-gray-500 text-xs mt-0.5">
-                When voting opens, and when the next book and date are
-                announced.
-              </span>
-            </span>
-          </label>
+          <EmailNotificationsField
+            registration={register("emailNotifications")}
+          />
           <hr className="border-gray-200" />
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Mailing Address

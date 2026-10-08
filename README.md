@@ -159,6 +159,7 @@ All routes are under `/api` and, except sign-in, registration, and password rese
 | GET                 | `/meetings/:id/results/books`, `/dates`  | Results (host, or everyone once finalized)                     |
 | GET                 | `/metadata/books-search`, `/book-detail` | Open Library search for the book form                          |
 | POST                | `/feedback`                              | Send feedback from the Help page                               |
+| GET                 | `/config`                                | Public: the address notification emails come from              |
 
 ## Deployment
 

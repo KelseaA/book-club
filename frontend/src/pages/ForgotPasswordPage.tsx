@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 
@@ -14,6 +14,13 @@ export default function ForgotPasswordPage() {
     formState: { errors },
   } = useForm<FormValues>();
 
+  // Named in the confirmation so people know what to look for in spam
+  const config = useQuery({
+    queryKey: ["config"],
+    queryFn: () => api.get<{ emailSender: string | null }>("/config"),
+    staleTime: Infinity,
+  });
+
   const request = useMutation<unknown, Error, FormValues>({
     mutationFn: (data) => api.post("/auth/forgot-password", data),
   });
@@ -27,8 +34,10 @@ export default function ForgotPasswordPage() {
           // page can't be used to find out who's a member
           <p className="text-sm text-gray-600 text-center">
             If that email belongs to a member, we've sent a link to reset your
-            password. It expires in 1 hour — check your spam folder if you don't
-            see it.
+            password. It expires in 1 hour.{" "}
+            {config.data?.emailSender
+              ? `It comes from ${config.data.emailSender} — check your spam folder if you don't see it.`
+              : "Check your spam folder if you don't see it."}
           </p>
         ) : (
           <>

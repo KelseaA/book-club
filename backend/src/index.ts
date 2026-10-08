@@ -46,6 +46,13 @@ app.use("/api/feedback", feedbackRoutes);
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
+// Public: the address notification emails come from, so the sign-up and
+// profile pages can tell people to add it to their contacts (it's in every
+// email anyway). null when email isn't configured.
+app.get("/api/config", (_req, res) =>
+  res.json({ emailSender: process.env.GMAIL_USER || null }),
+);
+
 // Must be registered after all routes
 app.use(errorHandler);
 

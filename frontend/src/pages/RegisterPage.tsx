@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import EmailNotificationsField from "../components/EmailNotificationsField";
 import type { Member } from "../types";
 
 interface FormValues {
@@ -163,22 +164,10 @@ export default function RegisterPage() {
               <input className="input" {...register("country")} />
             </div>
           </div>
-          <label className="flex items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5 w-4 h-4 accent-brand-500"
-              {...register("emailNotifications")}
-            />
-            <span>
-              <span className="font-medium text-gray-800">
-                Email me about meetings
-              </span>
-              <span className="block text-gray-500 text-xs mt-0.5">
-                When voting opens, and when the next book and date are
-                announced. You can change this later in your profile.
-              </span>
-            </span>
-          </label>
+          <EmailNotificationsField
+            registration={register("emailNotifications")}
+            note="You can change this later in your profile."
+          />
           {reg.isError && <p className="error-text">{reg.error.message}</p>}
           <button
             type="submit"
