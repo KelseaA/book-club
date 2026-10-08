@@ -37,13 +37,16 @@ export async function sendPasswordResetEmail(opts: {
     return;
   }
 
+  // Greet by first name — "Hi Kelsea", not "Hi Kelsea Anderson"
+  const firstName = opts.name.trim().split(/\s+/)[0];
+
   await transporter.sendMail({
     from: `"Book Club" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject: "Reset your Book Club password",
-    text: `Hi ${opts.name},\n\nUse this link to set a new password. It works once and expires in 1 hour:\n\n${opts.link}\n\nIf you didn't ask for this, you can ignore this email.`,
+    text: `Hi ${firstName},\n\nUse this link to set a new password. It works once and expires in 1 hour:\n\n${opts.link}\n\nIf you didn't ask for this, you can ignore this email.`,
     html: `
-      <p>Hi ${escapeHtml(opts.name)},</p>
+      <p>Hi ${escapeHtml(firstName)},</p>
       <p>Use this link to set a new password. It works once and expires in 1 hour:</p>
       <p><a href="${escapeHtml(opts.link)}">Reset my password</a></p>
       <p style="color:#666">If you didn't ask for this, you can ignore this email.</p>
