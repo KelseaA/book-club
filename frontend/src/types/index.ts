@@ -7,6 +7,7 @@ export interface Member {
   name: string;
   email: string;
   isAdmin: boolean;
+  emailNotifications: boolean;
   streetAddress?: string | null;
   city?: string | null;
   state?: string | null;

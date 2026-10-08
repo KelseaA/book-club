@@ -26,6 +26,7 @@ export const updateProfileSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   country: z.string().optional(),
+  emailNotifications: z.boolean().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).optional(),
 });
@@ -47,6 +48,7 @@ export async function updateProfile(req: Request, res: Response) {
     state,
     zipCode,
     country,
+    emailNotifications,
     currentPassword,
     newPassword,
   } = req.body;
@@ -83,6 +85,7 @@ export async function updateProfile(req: Request, res: Response) {
       state,
       zipCode,
       country,
+      emailNotifications,
       // A new password signs out every other session (see lib/session.ts)
       ...(newPassword && {
         passwordHash: await bcrypt.hash(newPassword, SALT_ROUNDS),

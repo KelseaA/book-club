@@ -23,6 +23,8 @@ export const registerSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   country: z.string().optional(),
+  // Notifications are opt-in
+  emailNotifications: z.boolean().optional(),
 });
 
 export const loginSchema = z.object({
@@ -50,6 +52,7 @@ export async function register(req: Request, res: Response) {
     state,
     zipCode,
     country,
+    emailNotifications,
   } = req.body;
 
   if (!(await isValidJoinToken(prisma, joinToken))) {
@@ -81,6 +84,7 @@ export async function register(req: Request, res: Response) {
       state,
       zipCode,
       country,
+      emailNotifications: emailNotifications ?? false,
     },
   });
 

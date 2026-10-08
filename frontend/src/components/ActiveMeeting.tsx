@@ -18,7 +18,6 @@ import DateAvailabilityVote from "./DateAvailabilityVote";
 import BookResults from "./BookResults";
 import DateResults from "./DateResults";
 import FinalizeMeetingButton from "./FinalizeMeetingButton";
-import RevealResultsButton from "./RevealResultsButton";
 import type { BookOption, DateOption, Meeting } from "../types";
 
 type BookFormMode = "none" | "add" | "edit";
@@ -26,7 +25,7 @@ type DateFormMode = "none" | "add" | "edit";
 
 /**
  * The meeting currently being planned or voted on: proposals, voting, and
- * (for the host, or once revealed) results.
+ * (for the host) live results.
  */
 export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
   const { member } = useAuth();
@@ -36,12 +35,6 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
   const [editingBook, setEditingBook] = useState<BookOption | null>(null);
   const [dateFormMode, setDateFormMode] = useState<DateFormMode>("none");
   const [editingDate, setEditingDate] = useState<DateOption | null>(null);
-  const [confirmDeleteBookId, setConfirmDeleteBookId] = useState<number | null>(
-    null,
-  );
-  const [confirmDeleteDateId, setConfirmDeleteDateId] = useState<number | null>(
-    null,
-  );
 
   // Combined vote state
   const [bookRanks, setBookRanks] = useState<
@@ -54,8 +47,9 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
   const submitVote = useSubmitVote(meeting.id);
   const openVotingMutation = useOpenVoting(meeting.id);
 
-  const canSeeResults =
-    meeting.resultsVisible || meeting.hostMemberId === member?.id;
+  // Results stay with the host until the meeting is finalized, so members who
+  // haven't voted yet aren't swayed by the standings
+  const canSeeResults = meeting.hostMemberId === member?.id;
   const { data: bookResultsData } = useBookResults(meeting.id, canSeeResults);
   const { data: dateResultsData } = useDateResults(meeting.id, canSeeResults);
 
@@ -90,11 +84,6 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
             </h2>
             <MeetingStatusBadge status={meeting.status} />
           </div>
-          {meeting.resultsVisible && (
-            <p className="text-xs text-green-700 font-medium mt-1">
-              Results visible to all members
-            </p>
-          )}
           {isSetup && !isHost && (
             <p className="text-sm text-gray-500 mt-1">
               The host is putting together the book and date options. You'll see
@@ -200,47 +189,25 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
                       </div>
                       {isHost && (
                         <div className="flex gap-2 shrink-0">
-                          {!hasVotes && confirmDeleteBookId === book.id ? (
+                          {/* Proposals are host-only drafts, so removing one needs no confirm step */}
+                          {!hasVotes && (
                             <>
                               <button
-                                className="text-xs text-red-600 font-medium hover:underline"
+                                className="text-xs text-brand-600 hover:underline"
                                 onClick={() => {
-                                  deleteBook.mutate(book.id);
-                                  setConfirmDeleteBookId(null);
+                                  setEditingBook(book);
+                                  setBookFormMode("none");
                                 }}
                               >
-                                Confirm
+                                Edit
                               </button>
                               <button
-                                className="text-xs text-gray-500 hover:underline"
-                                onClick={() => setConfirmDeleteBookId(null)}
+                                className="text-xs text-red-500 hover:underline"
+                                onClick={() => deleteBook.mutate(book.id)}
+                                disabled={deleteBook.isPending}
                               >
-                                Cancel
+                                Remove
                               </button>
-                            </>
-                          ) : (
-                            <>
-                              {!hasVotes && (
-                                <>
-                                  <button
-                                    className="text-xs text-brand-600 hover:underline"
-                                    onClick={() => {
-                                      setEditingBook(book);
-                                      setBookFormMode("none");
-                                    }}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    className="text-xs text-red-500 hover:underline"
-                                    onClick={() =>
-                                      setConfirmDeleteBookId(book.id)
-                                    }
-                                  >
-                                    Remove
-                                  </button>
-                                </>
-                              )}
                             </>
                           )}
                         </div>
@@ -306,40 +273,19 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
                       </div>
                       {isHost && !hasVotes && (
                         <div className="flex gap-2">
-                          {confirmDeleteDateId === d.id ? (
-                            <>
-                              <button
-                                className="text-xs text-red-600 font-medium hover:underline"
-                                onClick={() => {
-                                  deleteDate.mutate(d.id);
-                                  setConfirmDeleteDateId(null);
-                                }}
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                className="text-xs text-gray-500 hover:underline"
-                                onClick={() => setConfirmDeleteDateId(null)}
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                className="text-xs text-brand-600 hover:underline"
-                                onClick={() => setEditingDate(d)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="text-xs text-red-500 hover:underline"
-                                onClick={() => setConfirmDeleteDateId(d.id)}
-                              >
-                                Remove
-                              </button>
-                            </>
-                          )}
+                          <button
+                            className="text-xs text-brand-600 hover:underline"
+                            onClick={() => setEditingDate(d)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="text-xs text-red-500 hover:underline"
+                            onClick={() => deleteDate.mutate(d.id)}
+                            disabled={deleteDate.isPending}
+                          >
+                            Remove
+                          </button>
                         </div>
                       )}
                     </div>
@@ -482,7 +428,6 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
           )}
           {isHost && (
             <div className="pt-2 border-t border-gray-200 space-y-4">
-              <RevealResultsButton meeting={meeting} />
               <FinalizeMeetingButton meeting={meeting} />
             </div>
           )}

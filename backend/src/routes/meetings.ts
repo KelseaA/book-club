@@ -6,7 +6,6 @@ import {
   listMeetings,
   setHost,
   openVoting,
-  revealResults,
   finalizeMeeting,
   setHostSchema,
   finalizeSchema,
@@ -34,7 +33,6 @@ router.put("/:meetingId/host", validate(setHostSchema), setHost);
 
 // Host-only actions
 router.post("/:meetingId/open-voting", openVoting);
-router.post("/:meetingId/reveal", revealResults);
 router.post("/:meetingId/finalize", validate(finalizeSchema), finalizeMeeting);
 
 export default router;

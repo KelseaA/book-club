@@ -9,13 +9,14 @@ A private, invite-only web app for running a book club: the host proposes books 
 - **Drafts are private.** During setup only the host sees the book and date options, so they can revise freely. Everyone sees them once voting opens.
 - **Voting.** Each member submits one vote: a full drag-and-drop ranking of the books plus the dates they're available. It's locked once submitted. Once anyone votes, the books and dates are locked too.
 - **Scoring.** Books use a Borda count: with N books, a first choice earns N points, second earns N−1, and so on. Dates are ranked by how many members can make them.
-- **Results.** Hidden from everyone but the host until the host reveals them.
+- **Results.** The host sees them as votes come in; everyone else sees them once the host finalizes, so late voters aren't swayed.
 - **Finalizing.** The top book and best-attended date win automatically. If options tie for first, the host picks between the tied options. Finalizing locks the meeting and saves a snapshot of the ranking.
 - **Home page.** Shows each finalized meeting that hasn't happened yet (book, date, host's address) above the meeting being planned.
 - **Archive.** Past meetings with the host and final book ranking. It doesn't show proposed dates, date votes, or the host's address.
 - **Invite-only.** The club has one reusable join link, shown on the Members page. Any member can copy it or reset it if it leaks.
 - **Admins.** Admins can remove members (they're signed out and can't sign back in; their history stays) or restore them, and can make other members admins. The club always keeps at least one admin: the last admin can't step down, be removed, or delete their account until someone else is an admin. On a fresh install, the first person to register becomes the admin.
 - **Deleting your account** erases your name, email, address, and password. Votes in finalized meetings stay, anonymously, so the archive doesn't change.
+- **Email notifications (opt-in).** Members who turn them on (Profile, or when signing up) get an email when voting opens and when the winner is announced, with the book, date, time, and host's address. Off by default.
 - **Password reset.** Self-service by email from the sign-in page. Changing or resetting a password signs out all other sessions.
 
 ## Tech stack
@@ -95,7 +96,7 @@ Open http://localhost:5173. The frontend forwards `/api` requests to the backend
 
 ### Email
 
-Password reset and feedback emails go through Gmail. Set `GMAIL_USER` and `GMAIL_APP_PASSWORD` in `backend/.env`. The password is a Google **app password**, not your normal one: create it at https://myaccount.google.com/apppasswords (requires 2-Step Verification). Google revokes app passwords if you change your Google password, so make a new one if emails stop arriving.
+Password reset, notification, and feedback emails go through Gmail. Set `CLUB_TIMEZONE` so meeting times in emails show in the club's local time. Set `GMAIL_USER` and `GMAIL_APP_PASSWORD` in `backend/.env`. The password is a Google **app password**, not your normal one: create it at https://myaccount.google.com/apppasswords (requires 2-Step Verification). Google revokes app passwords if you change your Google password, so make a new one if emails stop arriving.
 
 Without email configured, the app still runs. In development, reset links are printed in the backend terminal instead.
 
@@ -150,13 +151,12 @@ All routes are under `/api` and, except sign-in, registration, and password rese
 | GET                 | `/meetings/:id`                          | One meeting                                                    |
 | PUT                 | `/meetings/:id/host`                     | Set the host (any member)                                      |
 | POST                | `/meetings/:id/open-voting`              | Host: open voting                                              |
-| POST                | `/meetings/:id/reveal`                   | Host: show results to everyone                                 |
 | POST                | `/meetings/:id/finalize`                 | Host: finalize (tie-break choices only when tied)              |
 | POST / PUT / DELETE | `/meetings/:id/books[/:bookId]`          | Host: manage book options (max 5)                              |
 | POST / PUT / DELETE | `/meetings/:id/dates[/:dateId]`          | Host: manage date options (max 4)                              |
 | POST                | `/meetings/:id/votes`                    | Submit your vote (ranking + dates, once)                       |
 | GET                 | `/meetings/:id/votes/me`                 | Whether you've voted                                           |
-| GET                 | `/meetings/:id/results/books`, `/dates`  | Results (host, or everyone once revealed)                      |
+| GET                 | `/meetings/:id/results/books`, `/dates`  | Results (host, or everyone once finalized)                     |
 | GET                 | `/metadata/books-search`, `/book-detail` | Open Library search for the book form                          |
 | POST                | `/feedback`                              | Send feedback from the Help page                               |
 

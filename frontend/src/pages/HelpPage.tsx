@@ -14,7 +14,7 @@ const steps: Step[] = [
   },
   {
     title: "The host role",
-    body: "Any member can reassign the host using the selector at the top of the Home page. The host is the only person who can add, edit, or remove book proposals and dates, and they're the ones who open voting, reveal results, and finalize the meeting.",
+    body: "Any member can reassign the host using the selector at the top of the Home page. The host is the only person who can add, edit, or remove book proposals and dates, and they're the ones who open voting and finalize the meeting.",
   },
   {
     title: "Book Proposals",
@@ -34,7 +34,7 @@ const steps: Step[] = [
   },
   {
     title: "Results",
-    body: "The host can see results as votes come in. When they're ready to share, they click \"Reveal Results\" to make them visible to everyone. Results show how the group ranked each book and which dates had the most availability. When voting is done, the host finalizes the meeting: the top-ranked book and the date the most people can make win automatically. If there's a tie, the host picks between the tied options.",
+    body: "The host can see results as votes come in; everyone else sees them once the host announces the winner. Results show how the group ranked each book and which dates had the most availability. When voting is done, the host finalizes the meeting: the top-ranked book and the date the most people can make win automatically. If there's a tie, the host picks between the tied options.",
   },
   {
     title: "Archive",
@@ -46,7 +46,7 @@ const steps: Step[] = [
   },
   {
     title: "Your Profile",
-    body: 'Click your name in the top menu to update your display name, email, home address, or password. Your address is shown to other members on the dashboard when you are hosting the meeting. Forgot your password? Use the "Forgot password?" link on the sign-in page and we\'ll email you a reset link.',
+    body: 'Click your name in the top menu to update your display name, email, home address, or password, and to turn on email notifications (an email when voting opens and when the next book and date are announced — off unless you turn it on). Your address is shown to other members on the dashboard when you are hosting the meeting. Forgot your password? Use the "Forgot password?" link on the sign-in page and we\'ll email you a reset link.',
   },
 ];
 

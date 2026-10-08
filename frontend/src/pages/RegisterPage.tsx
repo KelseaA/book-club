@@ -14,6 +14,7 @@ interface FormValues {
   state: string;
   zipCode: string;
   country: string;
+  emailNotifications: boolean;
 }
 
 export default function RegisterPage() {
@@ -162,6 +163,22 @@ export default function RegisterPage() {
               <input className="input" {...register("country")} />
             </div>
           </div>
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-4 h-4 accent-brand-500"
+              {...register("emailNotifications")}
+            />
+            <span>
+              <span className="font-medium text-gray-800">
+                Email me about meetings
+              </span>
+              <span className="block text-gray-500 text-xs mt-0.5">
+                When voting opens, and when the next book and date are
+                announced. You can change this later in your profile.
+              </span>
+            </span>
+          </label>
           {reg.isError && <p className="error-text">{reg.error.message}</p>}
           <button
             type="submit"

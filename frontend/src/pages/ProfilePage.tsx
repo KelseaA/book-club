@@ -9,6 +9,7 @@ import type { Member } from "../types";
 interface FormValues {
   name: string;
   email: string;
+  emailNotifications: boolean;
   streetAddress: string;
   city: string;
   state: string;
@@ -33,6 +34,7 @@ export default function ProfilePage() {
     defaultValues: {
       name: member?.name ?? "",
       email: member?.email ?? "",
+      emailNotifications: member?.emailNotifications ?? false,
       streetAddress: member?.streetAddress ?? "",
       city: member?.city ?? "",
       state: member?.state ?? "",
@@ -45,9 +47,10 @@ export default function ProfilePage() {
 
   const update = useMutation<Member, Error, FormValues>({
     mutationFn: (data) => {
-      const payload: Record<string, string> = {
+      const payload: Record<string, string | boolean> = {
         name: data.name,
         email: data.email,
+        emailNotifications: data.emailNotifications,
         streetAddress: data.streetAddress,
         city: data.city,
         state: data.state,
@@ -66,6 +69,7 @@ export default function ProfilePage() {
       reset({
         name: updated.name,
         email: updated.email,
+        emailNotifications: updated.emailNotifications,
         streetAddress: updated.streetAddress ?? "",
         city: updated.city ?? "",
         state: updated.state ?? "",
@@ -116,6 +120,22 @@ export default function ProfilePage() {
               <p className="error-text">{errors.email.message}</p>
             )}
           </div>
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-4 h-4 accent-brand-500"
+              {...register("emailNotifications")}
+            />
+            <span>
+              <span className="font-medium text-gray-800">
+                Email me about meetings
+              </span>
+              <span className="block text-gray-500 text-xs mt-0.5">
+                When voting opens, and when the next book and date are
+                announced.
+              </span>
+            </span>
+          </label>
           <hr className="border-gray-200" />
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Mailing Address

@@ -139,12 +139,6 @@ export function useOpenVoting(meetingId: number) {
   );
 }
 
-export function useRevealResults(meetingId: number) {
-  return useMeetingMutation((_: undefined) =>
-    api.post(`/meetings/${meetingId}/reveal`),
-  );
-}
-
 export function useFinalizeMeeting(meetingId: number) {
   return useMeetingMutation(
     // Tie-break ids are only needed (and only allowed) when there's a tie

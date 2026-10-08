@@ -4,6 +4,10 @@ import { parseId } from "../lib/params";
 import { isArchived, startOfToday } from "../lib/meetingDates";
 import { ACTIVE_MEMBER } from "../services/admin";
 import {
+  notifyMeetingAnnounced,
+  notifyVotingOpened,
+} from "../services/notifications";
+import {
   computeBookResults,
   computeDateResults,
   pickWinner,
@@ -194,29 +198,7 @@ export async function openVoting(req: Request, res: Response) {
     data: { status: "VOTING" },
     include: meetingIncludes(),
   });
-  return res.json(updated);
-}
-
-/** Host reveals results to all members */
-export async function revealResults(req: Request, res: Response) {
-  const id = parseId(req.params.meetingId);
-  const meeting = await prisma.meeting.findUnique({ where: { id } });
-  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
-  if (meeting.hostMemberId !== req.memberId) {
-    return res.status(403).json({ error: "Only the host can reveal results" });
-  }
-  // Revealing during SETUP would expose the draft book list via the results
-  if (meeting.status === "SETUP") {
-    return res
-      .status(400)
-      .json({ error: "Open voting before revealing results" });
-  }
-
-  const updated = await prisma.meeting.update({
-    where: { id: meeting.id },
-    data: { resultsVisible: true, revealedAt: new Date() },
-    include: meetingIncludes(),
-  });
+  await notifySafely(() => notifyVotingOpened(updated.id));
   return res.json(updated);
 }
 
@@ -298,7 +280,21 @@ export async function finalizeMeeting(req: Request, res: Response) {
   if ("error" in outcome) {
     return res.status(outcome.status).json({ error: outcome.error });
   }
+  await notifySafely(() => notifyMeetingAnnounced(outcome.meeting.id));
   return res.json(outcome.meeting);
+}
+
+/**
+ * Notifications go out after the change is saved. Awaited (serverless hosts
+ * may stop work after the response), but a failure is only logged — the
+ * action itself already succeeded.
+ */
+async function notifySafely(send: () => Promise<void>) {
+  try {
+    await send();
+  } catch (err) {
+    console.error("[notify] Failed to send notifications:", err);
+  }
 }
 
 function meetingIncludes() {
