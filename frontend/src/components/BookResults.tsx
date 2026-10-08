@@ -1,8 +1,15 @@
 import type { BookResultsResponse } from "../types";
 
-export default function BookResults({ data }: { data: BookResultsResponse }) {
-  // Highlight every book tied for first, not just the first row
-  const leaders = new Set(data.leaderIds);
+export default function BookResults({
+  data,
+  winnerId,
+}: {
+  data: BookResultsResponse;
+  /** Once a meeting is finalized, highlight only the book that won */
+  winnerId?: number | null;
+}) {
+  // Before then, highlight every book tied for first, not just the first row
+  const leaders = new Set(winnerId ? [winnerId] : data.leaderIds);
 
   return (
     <div className="space-y-3">

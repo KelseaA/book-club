@@ -65,7 +65,7 @@ export default function HelpPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold mb-1">How to use Book Club</h1>
         <p className="text-gray-500 text-sm">

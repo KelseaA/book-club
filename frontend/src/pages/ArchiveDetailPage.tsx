@@ -16,57 +16,44 @@ export default function ArchiveDetailPage() {
   if (!meeting) return null;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Link to="/archive" className="text-brand-600 hover:underline text-sm">
           ← Archive
         </Link>
       </div>
 
-      <div className="card">
-        <h1 className="text-2xl font-bold">{meetingTitle(meeting)}</h1>
-        <p className="text-gray-500 mt-1">
-          {meeting.meetingDate &&
-            `${formatMeetingDate(meeting.meetingDate, "short")} · `}
-          Hosted by <strong>{meeting.host.name}</strong>
-        </p>
-        {/* Note: host address intentionally omitted per archive requirements */}
+      {/* One header for the meeting — it's titled by the winning book, so the
+          book itself doesn't need its own card */}
+      <div className="card flex items-start gap-5">
+        {meeting.finalBookOption?.coverImageUrl && (
+          <img
+            src={meeting.finalBookOption.coverImageUrl}
+            alt=""
+            className="w-20 h-28 object-cover rounded-md shadow-sm shrink-0"
+          />
+        )}
+        <div>
+          <h1 className="text-2xl font-bold">{meetingTitle(meeting)}</h1>
+          {meeting.finalBookOption && (
+            <p className="text-gray-600">{meeting.finalBookOption.author}</p>
+          )}
+          <p className="text-sm text-gray-500 mt-2">
+            {meeting.meetingDate &&
+              `${formatMeetingDate(meeting.meetingDate, "short")} · `}
+            Hosted by {meeting.host.name}
+          </p>
+          {/* Host address intentionally omitted per archive requirements */}
+        </div>
       </div>
 
-      {/* Winning book */}
-      {meeting.finalBookOption && (
-        <div className="card border-brand-300 bg-brand-50">
-          <p className="text-xs font-semibold text-brand-600 uppercase tracking-wide mb-2">
-            Our Pick
-          </p>
-          <div className="flex items-center gap-4">
-            {meeting.finalBookOption.coverImageUrl && (
-              <img
-                src={meeting.finalBookOption.coverImageUrl}
-                alt=""
-                className="w-12 h-18 object-cover rounded"
-              />
-            )}
-            <div>
-              <p className="text-xl font-bold">
-                {meeting.finalBookOption.title}
-              </p>
-              <p className="text-gray-500">{meeting.finalBookOption.author}</p>
-              {meeting.finalBookOption.notes && (
-                <p className="text-sm text-gray-400 mt-1">
-                  {meeting.finalBookOption.notes}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Book rankings */}
       {bookResultsData && (
         <div className="card">
-          <h2 className="font-semibold mb-3">Final Book Rankings</h2>
-          <BookResults data={bookResultsData} />
+          <h2 className="font-semibold mb-3">How we ranked them</h2>
+          <BookResults
+            data={bookResultsData}
+            winnerId={meeting.finalBookOptionId}
+          />
         </div>
       )}
 

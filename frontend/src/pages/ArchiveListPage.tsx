@@ -19,8 +19,18 @@ export default function ArchiveListPage() {
             <Link
               key={meeting.id}
               to={`/archive/${meeting.id}`}
-              className="card flex items-center justify-between hover:border-brand-300 transition-colors"
+              className="group card flex items-center gap-4 hover:border-brand-300 transition-colors"
             >
+              {/* Placeholder keeps rows aligned when a book has no cover */}
+              {meeting.finalBookOption?.coverImageUrl ? (
+                <img
+                  src={meeting.finalBookOption.coverImageUrl}
+                  alt=""
+                  className="w-12 h-16 object-cover rounded shadow-sm shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-16 rounded bg-gray-100 shrink-0" />
+              )}
               <div>
                 <p className="font-semibold">{meetingTitle(meeting)}</p>
                 {meeting.finalBookOption && (
@@ -34,6 +44,10 @@ export default function ArchiveListPage() {
                   Hosted by {meeting.host.name}
                 </p>
               </div>
+              {/* Visible cue that the row opens more detail, even without hover */}
+              <span className="ml-auto shrink-0 text-sm font-medium text-brand-600 group-hover:underline">
+                See rankings →
+              </span>
             </Link>
           ))}
         </div>

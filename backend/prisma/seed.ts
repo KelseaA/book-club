@@ -94,21 +94,42 @@ async function seedMeetings(aliceId: number, bobId: number, carolId: number) {
       meetingId: past.id,
       title: "The Midnight Library",
       author: "Matt Haig",
+      coverImageUrl: "https://covers.openlibrary.org/b/id/10313767-L.jpg",
     },
   });
-  await prisma.bookOption.create({
+  const pastRunnerUp = await prisma.bookOption.create({
     data: {
       meetingId: past.id,
       title: "Project Hail Mary",
       author: "Andy Weir",
+      coverImageUrl: "https://covers.openlibrary.org/b/id/11200092-L.jpg",
     },
   });
   await prisma.meeting.update({
     where: { id: past.id },
     data: { finalBookOptionId: pastWinner.id },
   });
+  // Ballots so the archive shows a real ranking (Borda: 5 pts vs 4 pts)
+  for (const [memberId, first, second] of [
+    [aliceId, pastWinner.id, pastRunnerUp.id],
+    [bobId, pastWinner.id, pastRunnerUp.id],
+    [carolId, pastRunnerUp.id, pastWinner.id],
+  ]) {
+    await prisma.bookVote.create({
+      data: {
+        meetingId: past.id,
+        memberId,
+        ranks: {
+          create: [
+            { bookOptionId: first, rank: 1 },
+            { bookOptionId: second, rank: 2 },
+          ],
+        },
+      },
+    });
+  }
 
-  // Upcoming meeting (Alice hosting) — finalized, shows in the "Up next" card
+  // Upcoming meeting (Alice hosting) — finalized, shows in the "Upcoming meeting" card
   const upcoming = await prisma.meeting.create({
     data: {
       hostMemberId: aliceId,
