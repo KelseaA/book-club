@@ -4,6 +4,7 @@ import type {
   Meeting,
   CurrentMeetings,
   MemberSummary,
+  RemovedMember,
   BookVoteStatus,
   BookResultsResponse,
   DateResultsResponse,
@@ -40,6 +41,53 @@ export function useMembers() {
     queryKey: ["members"],
     queryFn: () => api.get("/members"),
   });
+}
+
+// ── Member admin ──────────────────────────────────────────────────────────────
+
+/** Admin only — the backend rejects everyone else */
+export function useRemovedMembers(enabled: boolean) {
+  return useQuery<RemovedMember[], Error>({
+    queryKey: ["members", "removed"],
+    queryFn: () => api.get("/members/removed"),
+    enabled,
+  });
+}
+
+/** Shared by the admin actions: they all change who's listed and who's admin */
+function useMembershipMutation<TVar>(fn: (v: TVar) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation<unknown, Error, TVar>({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["members"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function useRemoveMember() {
+  return useMembershipMutation((memberId: number) =>
+    api.post(`/members/${memberId}/remove`),
+  );
+}
+
+export function useRestoreMember() {
+  return useMembershipMutation((memberId: number) =>
+    api.post(`/members/${memberId}/restore`),
+  );
+}
+
+export function useGrantAdmin() {
+  return useMembershipMutation((memberId: number) =>
+    api.post(`/members/${memberId}/admin`),
+  );
+}
+
+export function useStepDown() {
+  return useMembershipMutation((_: undefined) =>
+    api.post("/members/me/step-down"),
+  );
 }
 
 // ── Join link ─────────────────────────────────────────────────────────────────

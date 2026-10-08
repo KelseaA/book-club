@@ -10,6 +10,7 @@ import {
   resetPasswordWithToken,
 } from "../services/passwordReset";
 import { sendPasswordResetEmail } from "../lib/mailer";
+import { ACTIVE_MEMBER } from "../services/admin";
 
 export const registerSchema = z.object({
   // The club's join link token — registration is invite-only
@@ -64,8 +65,14 @@ export async function register(req: Request, res: Response) {
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  // The club always needs an admin: on a fresh install (no active admins),
+  // whoever joins first becomes one
+  const hasAdmin = await prisma.member.count({
+    where: { ...ACTIVE_MEMBER, isAdmin: true },
+  });
   const member = await prisma.member.create({
     data: {
+      isAdmin: hasAdmin === 0,
       name,
       email,
       passwordHash,
@@ -89,7 +96,11 @@ export async function checkJoinLink(req: Request, res: Response) {
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
 
-  const member = await prisma.member.findUnique({ where: { email } });
+  const member = await prisma.member.findFirst({
+    where: { email, ...ACTIVE_MEMBER },
+  });
+  // Same message for unknown, removed, and wrong-password, so sign-in can't
+  // be used to probe who's a member
   if (!member) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
@@ -121,8 +132,8 @@ export async function me(req: Request, res: Response) {
  * responds the same way, so it can't be used to find out who's a member.
  */
 export async function forgotPassword(req: Request, res: Response) {
-  const member = await prisma.member.findUnique({
-    where: { email: req.body.email },
+  const member = await prisma.member.findFirst({
+    where: { email: req.body.email, ...ACTIVE_MEMBER },
   });
   if (member) {
     const link = await createResetLink(member.id);

@@ -43,7 +43,7 @@ export async function sendPasswordResetEmail(opts: {
   await transporter.sendMail({
     from: `"Book Club" <${process.env.GMAIL_USER}>`,
     to: opts.to,
-    subject: "Reset your Book Club password",
+    subject: "Reset Your Book Club Password",
     text: `Hi ${firstName},\n\nUse this link to set a new password. It works once and expires in 1 hour:\n\n${opts.link}\n\nIf you didn't ask for this, you can ignore this email.`,
     html: `
       <p>Hi ${escapeHtml(firstName)},</p>
@@ -69,7 +69,7 @@ export async function sendFeedbackEmail(opts: {
   await transporter.sendMail({
     from: `"Book Club" <${process.env.GMAIL_USER}>`,
     to,
-    subject: `New feedback from ${opts.fromName}`,
+    subject: `New Feedback From ${opts.fromName}`,
     text: `${opts.fromName} (${opts.fromEmail}) submitted feedback:\n\n${opts.message}`,
     html: `
       <p><strong>${escapeHtml(opts.fromName)}</strong> (<a href="mailto:${escapeHtml(opts.fromEmail)}">${escapeHtml(opts.fromEmail)}</a>) submitted feedback:</p>

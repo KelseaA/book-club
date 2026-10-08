@@ -156,9 +156,19 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
                             href={book.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-medium text-sm truncate text-brand-600 hover:underline block"
+                            className="font-medium text-sm truncate text-gray-900 hover:text-brand-600 hover:underline block"
                           >
                             {book.title}
+                            {/* Normal text color so it doesn't look like a visited link; the arrow marks an outside page */}
+                            <span
+                              aria-hidden="true"
+                              className="text-gray-400 ml-1"
+                            >
+                              ↗
+                            </span>
+                            <span className="sr-only">
+                              (opens in a new tab)
+                            </span>
                           </a>
                         ) : (
                           <p className="font-medium text-sm truncate">

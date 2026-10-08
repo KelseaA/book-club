@@ -198,8 +198,9 @@ export default function ProfilePage() {
         {confirmDelete ? (
           <div className="space-y-3">
             <p className="text-sm text-gray-700">
-              This will permanently delete your account and all your votes. This
-              cannot be undone.
+              This permanently deletes your account: your name, email, address,
+              and password are erased. Votes in past meetings stay (anonymously)
+              so the archive doesn't change. This cannot be undone.
             </p>
             {deleteAccount.isError && (
               <p className="error-text">{deleteAccount.error.message}</p>

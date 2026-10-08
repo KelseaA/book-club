@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { parseId } from "../lib/params";
+import { isArchived } from "../lib/meetingDates";
 import { computeBookResults, computeDateResults } from "../services/results";
 import { z } from "zod";
 
@@ -147,6 +148,12 @@ export async function getBookResults(req: Request, res: Response) {
 export async function getDateResults(req: Request, res: Response) {
   const meeting = await getMeetingForResults(req, res);
   if (!meeting) return;
+  // Who could make which date isn't kept once a meeting is in the archive
+  if (isArchived(meeting)) {
+    return res
+      .status(403)
+      .json({ error: "Date results aren't kept for past meetings" });
+  }
   const results = await computeDateResults(prisma, meeting.id);
   return res.json({ meetingId: meeting.id, ...results });
 }

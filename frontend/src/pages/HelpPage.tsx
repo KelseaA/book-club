@@ -42,7 +42,7 @@ const steps: Step[] = [
   },
   {
     title: "Members & inviting people",
-    body: "The Members page lists everyone in the club. Book Club is invite-only: to bring someone in, copy the invite link from the Members page and text it to them. The same link works for everyone. If it ends up somewhere it shouldn't, any member can reset it — people who already joined aren't affected.",
+    body: "The Members page lists everyone in the club. Book Club is invite-only: to bring someone in, copy the invite link from the Members page and text it to them. The same link works for everyone. If it ends up somewhere it shouldn't, any member can reset it — people who already joined aren't affected. Admins (marked on the Members page) can also remove members and make other members admins. The club always keeps at least one admin, so the last admin has to make someone else an admin before stepping down.",
   },
   {
     title: "Your Profile",

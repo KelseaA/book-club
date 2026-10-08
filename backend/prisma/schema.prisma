@@ -16,13 +16,23 @@ enum MeetingStatus {
 }
 
 model Member {
-  id             Int     @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   name           String
-  email          String  @unique
+  email          String    @unique
   passwordHash   String
   // Bumped on password reset/change; login cookies carry the version they
   // were issued with, so bumping it signs out every existing session
-  sessionVersion Int     @default(0)
+  sessionVersion Int       @default(0)
+  // Admins can remove/restore members and make others admins. The club
+  // always keeps at least one active admin (see services/admin.ts).
+  isAdmin        Boolean   @default(false)
+  // Set when an admin removes the member: they can't sign in and are hidden
+  // from lists, but their history (votes, hosted meetings) stays intact.
+  // Restoring clears it.
+  removedAt      DateTime?
+  // Set when the member deletes their own account. Personal details are
+  // wiped at the same time; the anonymous row keeps history consistent.
+  deletedAt      DateTime?
   // Address fields for profile purposes
   streetAddress  String?
   city           String?

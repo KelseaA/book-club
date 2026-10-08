@@ -7,6 +7,15 @@ import { SALT_ROUNDS } from "../services/passwordReset";
 import { setSessionCookie, clearSessionCookie } from "../lib/session";
 import { appUrl } from "../lib/tokens";
 import { getOrCreateJoinLink, resetJoinLink } from "../services/joinLink";
+import { parseId } from "../lib/params";
+import {
+  ACTIVE_MEMBER,
+  deleteOwnAccount,
+  grantAdmin,
+  removeMember,
+  restoreMember,
+  stepDownAsAdmin,
+} from "../services/admin";
 
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -87,47 +96,63 @@ export async function updateProfile(req: Request, res: Response) {
   return res.json(publicMember(updated));
 }
 
-/** List all members (name + id only) for HostSelector and the Members page */
+/** Active members (for the Members page and host picker), admins flagged */
 export async function listMembers(_req: Request, res: Response) {
   const members = await prisma.member.findMany({
-    select: { id: true, name: true },
+    where: ACTIVE_MEMBER,
+    select: { id: true, name: true, isAdmin: true },
     orderBy: { name: "asc" },
   });
   return res.json(members);
 }
 
-/** Permanently delete the authenticated member's account */
-export async function deleteAccount(req: Request, res: Response) {
-  const memberId = req.memberId!;
-
-  // Block if the member is host of a meeting that isn't finalized
-  const activeHostedMeeting = await prisma.meeting.findFirst({
-    where: { hostMemberId: memberId, status: { not: "FINALIZED" } },
-    select: { id: true },
+/** Admin only: removed members, so a removal can be undone */
+export async function listRemovedMembers(_req: Request, res: Response) {
+  const members = await prisma.member.findMany({
+    where: { removedAt: { not: null }, deletedAt: null },
+    select: { id: true, name: true, removedAt: true },
+    orderBy: { name: "asc" },
   });
-  if (activeHostedMeeting) {
-    return res.status(400).json({
-      error:
-        "You are the host of the meeting being planned. Transfer the host role before deleting your account.",
-    });
+  return res.json(members);
+}
+
+/** Sends a membership-change outcome from services/admin.ts as the response */
+function respond(
+  res: Response,
+  outcome: { ok: true } | { status: number; error: string },
+) {
+  if ("error" in outcome) {
+    return res.status(outcome.status).json({ error: outcome.error });
   }
+  return res.json({ ok: true });
+}
 
-  // Delete votes, then the member, in a transaction
-  await prisma.$transaction(async (tx) => {
-    // Delete book vote ranks first (child of BookVote)
-    const bookVotes = await tx.bookVote.findMany({
-      where: { memberId },
-      select: { id: true },
-    });
-    const bookVoteIds = bookVotes.map((v) => v.id);
-    await tx.bookVoteRank.deleteMany({
-      where: { bookVoteId: { in: bookVoteIds } },
-    });
-    await tx.bookVote.deleteMany({ where: { memberId } });
-    await tx.dateSelection.deleteMany({ where: { memberId } });
-    await tx.member.delete({ where: { id: memberId } });
-  });
+export async function removeMemberHandler(req: Request, res: Response) {
+  const targetId = parseId(req.params.memberId);
+  return respond(res, await removeMember(req.memberId!, targetId));
+}
 
+export async function restoreMemberHandler(req: Request, res: Response) {
+  return respond(res, await restoreMember(parseId(req.params.memberId)));
+}
+
+export async function grantAdminHandler(req: Request, res: Response) {
+  return respond(res, await grantAdmin(parseId(req.params.memberId)));
+}
+
+export async function stepDownHandler(req: Request, res: Response) {
+  return respond(res, await stepDownAsAdmin(req.memberId!));
+}
+
+/**
+ * Deletes the signed-in member's account: personal details are wiped and
+ * they're signed out (see services/admin.ts deleteOwnAccount).
+ */
+export async function deleteAccount(req: Request, res: Response) {
+  const outcome = await deleteOwnAccount(req.memberId!);
+  if ("error" in outcome) {
+    return res.status(outcome.status).json({ error: outcome.error });
+  }
   clearSessionCookie(res);
   return res.json({ ok: true });
 }

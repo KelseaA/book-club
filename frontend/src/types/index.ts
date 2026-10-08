@@ -6,6 +6,7 @@ export interface Member {
   id: number;
   name: string;
   email: string;
+  isAdmin: boolean;
   streetAddress?: string | null;
   city?: string | null;
   state?: string | null;
@@ -18,6 +19,7 @@ export interface Member {
 export interface MemberSummary {
   id: number;
   name: string;
+  isAdmin?: boolean; // present in the members list
   email?: string; // only present on the logged-in member's own profile, not in list/host contexts
   streetAddress?: string | null;
   city?: string | null;
@@ -121,4 +123,10 @@ export interface BookMetadata {
   author?: string;
   coverImageUrl?: string;
   sourceUrl?: string;
+}
+
+export interface RemovedMember {
+  id: number;
+  name: string;
+  removedAt: string;
 }

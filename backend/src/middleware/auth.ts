@@ -28,12 +28,36 @@ export async function requireAuth(
 
   const member = await prisma.member.findUnique({
     where: { id: session.memberId },
-    select: { sessionVersion: true },
+    select: { sessionVersion: true, removedAt: true, deletedAt: true },
   });
-  if (!member || member.sessionVersion !== session.sessionVersion) {
+  if (
+    !member ||
+    member.sessionVersion !== session.sessionVersion ||
+    member.removedAt ||
+    member.deletedAt
+  ) {
     return res.status(401).json({ error: "Session expired — please sign in" });
   }
 
   req.memberId = session.memberId;
+  next();
+}
+
+/**
+ * Use after requireAuth. Checks the admin flag fresh from the database on
+ * every request, so losing the role takes effect immediately.
+ */
+export async function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const member = await prisma.member.findUnique({
+    where: { id: req.memberId! },
+    select: { isAdmin: true },
+  });
+  if (!member?.isAdmin) {
+    return res.status(403).json({ error: "Only admins can do that" });
+  }
   next();
 }

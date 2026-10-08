@@ -14,6 +14,8 @@ A private, invite-only web app for running a book club: the host proposes books 
 - **Home page.** Shows each finalized meeting that hasn't happened yet (book, date, host's address) above the meeting being planned.
 - **Archive.** Past meetings with the host and final book ranking. It doesn't show proposed dates, date votes, or the host's address.
 - **Invite-only.** The club has one reusable join link, shown on the Members page. Any member can copy it or reset it if it leaks.
+- **Admins.** Admins can remove members (they're signed out and can't sign back in; their history stays) or restore them, and can make other members admins. The club always keeps at least one admin: the last admin can't step down, be removed, or delete their account until someone else is an admin. On a fresh install, the first person to register becomes the admin.
+- **Deleting your account** erases your name, email, address, and password. Votes in finalized meetings stay, anonymously, so the archive doesn't change.
 - **Password reset.** Self-service by email from the sign-in page. Changing or resetting a password signs out all other sessions.
 
 ## Tech stack
@@ -105,6 +107,7 @@ Run these from `backend/`. They talk directly to the database in `DATABASE_URL`,
 | ----------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `npm run invite`                    | Prints the club's join link (creating one if needed). Use it to get the first member in.         |
 | `npm run reset-password -- <email>` | Prints a one-time reset link for that member without emailing it — for when their email bounces. |
+| `npm run make-admin -- <email>`     | Makes a member an admin — a backstop if no admin can sign in.                                    |
 
 **Once the app is live,** these need to run against the production database: temporarily set `DATABASE_URL` (and `CLIENT_ORIGIN`, so links point at the real site) to the production values when you run them.
 
@@ -135,6 +138,10 @@ All routes are under `/api` and, except sign-in, registration, and password rese
 | POST                | `/auth/reset-password`                   | Set a new password from a reset link                           |
 | GET                 | `/members`                               | All members (id and name)                                      |
 | GET / PUT / DELETE  | `/members/me`                            | View, edit, or delete your account                             |
+| POST                | `/members/me/step-down`                  | Admin: stop being an admin (not allowed for the last admin)    |
+| GET                 | `/members/removed`                       | Admin: removed members                                         |
+| POST                | `/members/:id/remove`, `/restore`        | Admin: remove or restore a member                              |
+| POST                | `/members/:id/admin`                     | Admin: make a member an admin                                  |
 | GET                 | `/members/join-link`                     | The club's join link                                           |
 | POST                | `/members/join-link/reset`               | Replace the join link                                          |
 | GET                 | `/meetings/current`                      | Dashboard: upcoming finalized meetings + the one being planned |

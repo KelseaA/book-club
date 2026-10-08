@@ -48,7 +48,10 @@ export async function resetPasswordWithToken(token: string, password: string) {
 
     const row = await tx.passwordResetToken.findUniqueOrThrow({
       where: { tokenHash: hashToken(token) },
+      include: { member: { select: { removedAt: true, deletedAt: true } } },
     });
+    // Removal deletes outstanding tokens, but double-check here too
+    if (row.member.removedAt || row.member.deletedAt) return null;
     return tx.member.update({
       where: { id: row.memberId },
       data: { passwordHash, sessionVersion: { increment: 1 } },

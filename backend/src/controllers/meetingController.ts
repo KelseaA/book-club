@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { parseId } from "../lib/params";
+import { isArchived, startOfToday } from "../lib/meetingDates";
+import { ACTIVE_MEMBER } from "../services/admin";
 import {
   computeBookResults,
   computeDateResults,
@@ -13,16 +15,6 @@ const FINALIZED = "FINALIZED";
 export const setHostSchema = z.object({
   hostMemberId: z.number().int().positive(),
 });
-
-/**
- * Meetings stay "upcoming" through the whole day they happen and move to the
- * archive the day after.
- */
-function startOfToday(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 /**
  * During SETUP the host is still drafting, so only they see the book and date
@@ -111,7 +103,22 @@ export async function getMeeting(req: Request, res: Response) {
     include: meetingIncludes(),
   });
   if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+  if (isArchived(meeting)) return res.json(forArchive(meeting));
   return res.json(forViewer(meeting, req.memberId!));
+}
+
+/**
+ * Past meetings are for looking back on the book, so the archive doesn't
+ * keep the host's address or the date options around.
+ */
+function forArchive<
+  M extends { host: { id: number; name: string }; dateOptions: unknown[] },
+>(meeting: M) {
+  return {
+    ...meeting,
+    host: { id: meeting.host.id, name: meeting.host.name },
+    dateOptions: [],
+  };
 }
 
 /** Archive listing: meetings that have happened, most recent first */
@@ -133,8 +140,9 @@ export async function setHost(req: Request, res: Response) {
   const id = parseId(req.params.meetingId);
   const { hostMemberId } = req.body;
 
-  const hostExists = await prisma.member.findUnique({
-    where: { id: hostMemberId },
+  // Removed or deleted members can't be made host
+  const hostExists = await prisma.member.findFirst({
+    where: { id: hostMemberId, ...ACTIVE_MEMBER },
   });
   if (!hostExists) return res.status(404).json({ error: "Member not found" });
 

@@ -16,6 +16,7 @@ async function main() {
       name: "Alice Nguyen",
       email: "alice@example.com",
       passwordHash: password,
+      isAdmin: true, // the club always has at least one admin
       streetAddress: "123 Maple St",
       city: "Portland",
       state: "OR",
@@ -61,7 +62,7 @@ async function main() {
 
   console.log("✅ Seeding complete!");
   console.log("\nTest credentials (all use password: password123):");
-  console.log("  alice@example.com (host of the upcoming meeting)");
+  console.log("  alice@example.com (admin, host of the upcoming meeting)");
   console.log("  bob@example.com");
   console.log("  carol@example.com (host of the meeting being planned)");
 }
