@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { parseId } from "../lib/params";
-import { computeBookResults, computeDateResults } from "../services/results";
+import {
+  computeBookResults,
+  computeDateResults,
+  pickWinner,
+} from "../services/results";
 import { z } from "zod";
 
 const FINALIZED = "FINALIZED";
@@ -287,30 +291,6 @@ export async function finalizeMeeting(req: Request, res: Response) {
     return res.status(outcome.status).json({ error: outcome.error });
   }
   return res.json(outcome.meeting);
-}
-
-/**
- * The winner is the sole leader; with a tie, the host's tie-break choice,
- * which must be one of the tied options.
- */
-function pickWinner(
-  leaderIds: number[],
-  tieBreakId: number | undefined,
-): { id: number } | { error: string } {
-  if (leaderIds.length === 0) return { error: "there are no options" };
-  if (leaderIds.length === 1) {
-    if (tieBreakId !== undefined && tieBreakId !== leaderIds[0]) {
-      return { error: "there's no tie to break" };
-    }
-    return { id: leaderIds[0] };
-  }
-  if (tieBreakId === undefined) {
-    return { error: "there's a tie — choose one of the tied options" };
-  }
-  if (!leaderIds.includes(tieBreakId)) {
-    return { error: "the tie-break choice must be one of the tied options" };
-  }
-  return { id: tieBreakId };
 }
 
 function meetingIncludes() {

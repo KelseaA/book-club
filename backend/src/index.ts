@@ -40,7 +40,7 @@ app.use("/api/meetings", meetingRoutes);
 app.use("/api/meetings", bookOptionRoutes); // /api/meetings/:meetingId/books
 app.use("/api/meetings", dateOptionRoutes); // /api/meetings/:meetingId/dates
 app.use("/api/meetings", voteRoutes); // /api/meetings/:meetingId/votes
-app.use("/api/metadata", metadataRoutes); // /api/metadata/fetch
+app.use("/api/metadata", metadataRoutes); // Open Library book search
 app.use("/api/feedback", feedbackRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────

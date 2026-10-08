@@ -4,8 +4,10 @@ import { prisma } from "../lib/prisma";
 // Works with the shared client or inside a transaction
 type Db = typeof prisma | Prisma.TransactionClient;
 
+// ── Pure scoring rules (no database; covered by results.test.ts) ─────────────
+
 /** Ids of every item tied for the highest score (all items if none scored) */
-function leaderIds<T extends { id: number }>(
+export function leaderIds<T extends { id: number }>(
   items: T[],
   score: (item: T) => number,
 ): number[] {
@@ -15,21 +17,16 @@ function leaderIds<T extends { id: number }>(
 }
 
 /**
- * Borda count for a meeting's books: with N books, rank 1 earns N points,
- * rank 2 earns N-1, and so on. Ballots always rank every book (enforced in
- * voteController.submitVote), so every book gets a score from every ballot.
- *
- * leaderIds holds every book tied for first. More than one means the host
- * has to break the tie when finalizing.
+ * Borda count: with N books, rank 1 earns N points, rank 2 earns N-1, and so
+ * on. Ballots always rank every book (enforced in voteController.submitVote),
+ * so every book gets a score from every ballot. Returns points per book id.
  */
-export async function computeBookResults(db: Db, meetingId: number) {
-  const [bookOptions, ballots] = await Promise.all([
-    db.bookOption.findMany({ where: { meetingId }, orderBy: { id: "asc" } }),
-    db.bookVote.findMany({ where: { meetingId }, include: { ranks: true } }),
-  ]);
-
-  const n = bookOptions.length;
-  const points = new Map(bookOptions.map((b) => [b.id, 0]));
+export function bordaPoints(
+  bookIds: number[],
+  ballots: { ranks: { bookOptionId: number; rank: number }[] }[],
+): Map<number, number> {
+  const n = bookIds.length;
+  const points = new Map(bookIds.map((id) => [id, 0]));
   for (const ballot of ballots) {
     for (const r of ballot.ranks) {
       points.set(
@@ -38,6 +35,49 @@ export async function computeBookResults(db: Db, meetingId: number) {
       );
     }
   }
+  return points;
+}
+
+/**
+ * Who wins at finalize: the sole leader, or — when several options tie for
+ * first — the host's tie-break choice, which must be one of the tied options.
+ */
+export function pickWinner(
+  leaderIds: number[],
+  tieBreakId: number | undefined,
+): { id: number } | { error: string } {
+  if (leaderIds.length === 0) return { error: "there are no options" };
+  if (leaderIds.length === 1) {
+    if (tieBreakId !== undefined && tieBreakId !== leaderIds[0]) {
+      return { error: "there's no tie to break" };
+    }
+    return { id: leaderIds[0] };
+  }
+  if (tieBreakId === undefined) {
+    return { error: "there's a tie — choose one of the tied options" };
+  }
+  if (!leaderIds.includes(tieBreakId)) {
+    return { error: "the tie-break choice must be one of the tied options" };
+  }
+  return { id: tieBreakId };
+}
+
+// ── Database-backed results ──────────────────────────────────────────────────
+
+/**
+ * Book rankings for a meeting (Borda count, highest first). leaderIds holds
+ * every book tied for first; more than one means the host breaks the tie.
+ */
+export async function computeBookResults(db: Db, meetingId: number) {
+  const [bookOptions, ballots] = await Promise.all([
+    db.bookOption.findMany({ where: { meetingId }, orderBy: { id: "asc" } }),
+    db.bookVote.findMany({ where: { meetingId }, include: { ranks: true } }),
+  ]);
+
+  const points = bordaPoints(
+    bookOptions.map((b) => b.id),
+    ballots,
+  );
 
   const results = bookOptions
     .map((b) => ({ ...b, bordaPoints: points.get(b.id) ?? 0 }))
