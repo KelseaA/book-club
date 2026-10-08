@@ -9,12 +9,15 @@ function fmt(iso: string) {
 }
 
 export default function DateResults({ data }: { data: DateResultsResponse }) {
+  // Highlight every date tied for most available, not just the first row
+  const leaders = new Set(data.leaderIds);
+
   return (
     <div className="space-y-2">
-      {data.results.map((d, i) => (
+      {data.results.map((d) => (
         <div
           key={d.id}
-          className={`p-3 rounded-lg border ${i === 0 ? "border-brand-300 bg-brand-50" : "bg-white border-gray-200"}`}
+          className={`p-3 rounded-lg border ${leaders.has(d.id) ? "border-brand-300 bg-brand-50" : "bg-white border-gray-200"}`}
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">{fmt(d.date)}</span>

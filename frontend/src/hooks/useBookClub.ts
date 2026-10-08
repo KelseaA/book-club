@@ -81,7 +81,8 @@ export function useRevealResults(meetingId: number) {
 
 export function useFinalizeMeeting(meetingId: number) {
   return useMeetingMutation(
-    (body: { finalBookOptionId: number; meetingDate: string }) =>
+    // Tie-break ids are only needed (and only allowed) when there's a tie
+    (body: { bookTieBreakId?: number; dateTieBreakId?: number }) =>
       api.post(`/meetings/${meetingId}/finalize`, body),
   );
 }

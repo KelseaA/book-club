@@ -1,7 +1,8 @@
 import type { BookResultsResponse } from "../types";
 
 export default function BookResults({ data }: { data: BookResultsResponse }) {
-  const top = data.results[0];
+  // Highlight every book tied for first, not just the first row
+  const leaders = new Set(data.leaderIds);
 
   return (
     <div className="space-y-3">
@@ -11,7 +12,7 @@ export default function BookResults({ data }: { data: BookResultsResponse }) {
       {data.results.map((book, i) => (
         <div
           key={book.id}
-          className={`flex items-center gap-3 p-3 rounded-lg border ${book.id === top?.id ? "border-brand-300 bg-brand-50" : "bg-white border-gray-200"}`}
+          className={`flex items-center gap-3 p-3 rounded-lg border ${leaders.has(book.id) ? "border-brand-300 bg-brand-50" : "bg-white border-gray-200"}`}
         >
           <span className="text-lg font-bold w-6 text-center shrink-0">
             {i + 1}

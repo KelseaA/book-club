@@ -63,6 +63,9 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
   const isSetup = meeting.status === "SETUP";
   const hasVotes = meeting._count.bookVotes > 0;
   const canSeeOptions = isHost || !isSetup;
+  // The backend requires both, since finalizing picks a winning book and date
+  const readyToOpen =
+    meeting.bookOptions.length > 0 && meeting.dateOptions.length > 0;
 
   function handleSubmitVote() {
     // If the member never dragged anything, the displayed order is their ballot
@@ -348,7 +351,7 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
       )}
 
       {/* ── Open Voting trigger (SETUP phase, host only) — last step, so it sits below the options */}
-      {isSetup && isHost && meeting.bookOptions.length >= 1 && (
+      {isSetup && isHost && (
         <section className="card space-y-3">
           <div>
             <h2 className="text-lg font-semibold">Open Voting</h2>
@@ -365,12 +368,17 @@ export default function ActiveMeeting({ meeting }: { meeting: Meeting }) {
           <button
             className="btn-primary"
             onClick={() => openVotingMutation.mutate(undefined)}
-            disabled={openVotingMutation.isPending}
+            disabled={!readyToOpen || openVotingMutation.isPending}
           >
             {openVotingMutation.isPending
               ? "Opening…"
               : "Open Voting for All Members"}
           </button>
+          {!readyToOpen && (
+            <p className="text-xs text-gray-500">
+              Add at least one book and one date first.
+            </p>
+          )}
         </section>
       )}
 

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { parseId } from "../lib/params";
+import { computeBookResults, computeDateResults } from "../services/results";
 import { z } from "zod";
 
 const FINALIZED = "FINALIZED";
@@ -118,109 +119,36 @@ export async function submitVote(req: Request, res: Response) {
 
 // ── Results ───────────────────────────────────────────────────────────────────
 
-/**
- * Compute Borda count results for books.
- * If there are N books, rank 1 gets N points, rank 2 gets N-1, etc.
- */
-export async function getBookResults(req: Request, res: Response) {
+/** Loads the meeting and checks the viewer may see its results */
+async function getMeetingForResults(req: Request, res: Response) {
   const meetingId = parseId(req.params.meetingId);
-
-  const meeting = await prisma.meeting.findUnique({
-    where: { id: meetingId },
-    include: {
-      bookOptions: true,
-      bookVotes: { include: { ranks: true } },
-      host: { select: { id: true, name: true } },
-    },
-  });
-  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
-
+  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
+  if (!meeting) {
+    res.status(404).json({ error: "Meeting not found" });
+    return null;
+  }
   // Only the host can see results before resultsVisible is true
   if (!meeting.resultsVisible && meeting.hostMemberId !== req.memberId) {
-    return res.status(403).json({ error: "Results are not yet visible" });
+    res.status(403).json({ error: "Results are not yet visible" });
+    return null;
   }
-
-  const N = meeting.bookOptions.length;
-  // Accumulate Borda points per book option
-  const pointsMap = new Map<number, number>(
-    meeting.bookOptions.map(
-      (b: { id: number }) => [b.id, 0] as [number, number],
-    ),
-  );
-
-  for (const ballot of meeting.bookVotes) {
-    for (const rankRow of ballot.ranks) {
-      // Borda: rank 1 → N points, rank 2 → N-1 points, …
-      const points = N - rankRow.rank + 1;
-      pointsMap.set(
-        rankRow.bookOptionId,
-        (pointsMap.get(rankRow.bookOptionId) ?? 0) + points,
-      );
-    }
-  }
-
-  const results = meeting.bookOptions
-    .map(
-      (b: {
-        id: number;
-        title: string;
-        author: string;
-        notes: string | null;
-        coverImageUrl: string | null;
-      }) => ({ ...b, bordaPoints: pointsMap.get(b.id) ?? 0 }),
-    )
-    .sort(
-      (a: { bordaPoints: number }, b: { bordaPoints: number }) =>
-        b.bordaPoints - a.bordaPoints,
-    );
-
-  return res.json({
-    meetingId,
-    totalBallots: meeting.bookVotes.length,
-    results,
-  });
+  return meeting;
 }
 
-/** Compute date availability results (count of available members per date) */
+/** Borda count rankings for books (see services/results.ts) */
+export async function getBookResults(req: Request, res: Response) {
+  const meeting = await getMeetingForResults(req, res);
+  if (!meeting) return;
+  const results = await computeBookResults(prisma, meeting.id);
+  return res.json({ meetingId: meeting.id, ...results });
+}
+
+/** Count of available members per date option */
 export async function getDateResults(req: Request, res: Response) {
-  const meetingId = parseId(req.params.meetingId);
-
-  const meeting = await prisma.meeting.findUnique({
-    where: { id: meetingId },
-    include: {
-      dateOptions: {
-        include: {
-          dateSelections: {
-            include: { member: { select: { id: true, name: true } } },
-          },
-        },
-      },
-    },
-  });
-  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
-
-  if (!meeting.resultsVisible && meeting.hostMemberId !== req.memberId) {
-    return res.status(403).json({ error: "Results are not yet visible" });
-  }
-
-  const results = meeting.dateOptions
-    .map(
-      (d: {
-        id: number;
-        date: Date;
-        dateSelections: { member: { id: number; name: string } }[];
-      }) => ({
-        id: d.id,
-        date: d.date,
-        count: d.dateSelections.length,
-        availableMembers: d.dateSelections.map(
-          (s: { member: { id: number; name: string } }) => s.member,
-        ),
-      }),
-    )
-    .sort((a: { count: number }, b: { count: number }) => b.count - a.count);
-
-  return res.json({ meetingId, results });
+  const meeting = await getMeetingForResults(req, res);
+  if (!meeting) return;
+  const results = await computeDateResults(prisma, meeting.id);
+  return res.json({ meetingId: meeting.id, ...results });
 }
 
 /** Returns whether the current member has already voted this meeting */

@@ -34,7 +34,7 @@ const steps: Step[] = [
   },
   {
     title: "Results",
-    body: 'The host can see results as votes come in. When they\'re ready to share, they click "Reveal Results" to make them visible to everyone. Results show how the group ranked each book and which dates had the most availability. The host then picks the winning book and meeting date to finalize the meeting.',
+    body: "The host can see results as votes come in. When they're ready to share, they click \"Reveal Results\" to make them visible to everyone. Results show how the group ranked each book and which dates had the most availability. When voting is done, the host finalizes the meeting: the top-ranked book and the date the most people can make win automatically. If there's a tie, the host picks between the tied options.",
   },
   {
     title: "Archive",

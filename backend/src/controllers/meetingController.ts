@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { parseId } from "../lib/params";
+import { computeBookResults, computeDateResults } from "../services/results";
 import { z } from "zod";
 
 const FINALIZED = "FINALIZED";
@@ -154,7 +155,7 @@ export async function openVoting(req: Request, res: Response) {
   const id = parseId(req.params.meetingId);
   const meeting = await prisma.meeting.findUnique({
     where: { id },
-    include: { _count: { select: { bookOptions: true } } },
+    include: { _count: { select: { bookOptions: true, dateOptions: true } } },
   });
   if (!meeting) return res.status(404).json({ error: "Meeting not found" });
   if (meeting.hostMemberId !== req.memberId) {
@@ -169,6 +170,12 @@ export async function openVoting(req: Request, res: Response) {
     return res
       .status(400)
       .json({ error: "Add at least one book before opening voting" });
+  }
+  // Finalizing needs a winning date, and dates lock once voting starts
+  if (meeting._count.dateOptions === 0) {
+    return res
+      .status(400)
+      .json({ error: "Add at least one date before opening voting" });
   }
   const updated = await prisma.meeting.update({
     where: { id: meeting.id },
@@ -202,50 +209,108 @@ export async function revealResults(req: Request, res: Response) {
 }
 
 export const finalizeSchema = z.object({
-  finalBookOptionId: z.number().int().positive(),
-  meetingDate: z.string().datetime(),
+  // Only needed when there's a tie; must be one of the tied options
+  bookTieBreakId: z.number().int().positive().optional(),
+  dateTieBreakId: z.number().int().positive().optional(),
 });
 
-/** Host finalizes the meeting, locking everything and saving the winners */
+/**
+ * Host finalizes the meeting. The winners come from the votes, not from the
+ * host: the top Borda score wins the book and the most-available date wins
+ * the date. Only when several options tie for first does the host pick one
+ * of the tied options (bookTieBreakId / dateTieBreakId). Finalizing saves the
+ * winners plus a snapshot of the book ranking, makes results visible, and
+ * locks the meeting.
+ */
 export async function finalizeMeeting(req: Request, res: Response) {
   const id = parseId(req.params.meetingId);
-  const { finalBookOptionId, meetingDate } = req.body;
+  const { bookTieBreakId, dateTieBreakId } = req.body as {
+    bookTieBreakId?: number;
+    dateTieBreakId?: number;
+  };
 
-  const meeting = await prisma.meeting.findUnique({
-    where: { id },
-    include: { bookOptions: true },
-  });
-  if (!meeting) return res.status(404).json({ error: "Meeting not found" });
-  if (meeting.hostMemberId !== req.memberId) {
-    return res
-      .status(403)
-      .json({ error: "Only the host can finalize the meeting" });
-  }
-  if (meeting.status === FINALIZED) {
-    return res.status(400).json({ error: "Meeting already finalized" });
-  }
+  // Serializable so a vote landing mid-finalize can't change the counts
+  // between computing the winners and saving them
+  const outcome = await prisma.$transaction(
+    async (tx) => {
+      const meeting = await tx.meeting.findUnique({ where: { id } });
+      if (!meeting) return { status: 404, error: "Meeting not found" };
+      if (meeting.hostMemberId !== req.memberId) {
+        return { status: 403, error: "Only the host can finalize the meeting" };
+      }
+      if (meeting.status !== "VOTING") {
+        return {
+          status: 400,
+          error:
+            meeting.status === FINALIZED
+              ? "Meeting already finalized"
+              : "Open voting before finalizing",
+        };
+      }
 
-  // Ensure the chosen book belongs to this meeting
-  const bookBelongs = meeting.bookOptions.some(
-    (b) => b.id === finalBookOptionId,
-  );
-  if (!bookBelongs) {
-    return res
-      .status(400)
-      .json({ error: "finalBookOptionId does not belong to this meeting" });
-  }
+      const books = await computeBookResults(tx, meeting.id);
+      const dates = await computeDateResults(tx, meeting.id);
 
-  const updated = await prisma.meeting.update({
-    where: { id: meeting.id },
-    data: {
-      status: "FINALIZED",
-      resultsVisible: true, // finalization always makes results visible
-      finalBookOptionId,
-      meetingDate: new Date(meetingDate),
+      const book = pickWinner(books.leaderIds, bookTieBreakId);
+      if ("error" in book) return { status: 400, error: `Book: ${book.error}` };
+      const date = pickWinner(dates.leaderIds, dateTieBreakId);
+      if ("error" in date) return { status: 400, error: `Date: ${date.error}` };
+
+      const winningDate = dates.results.find((d) => d.id === date.id)!;
+      const updated = await tx.meeting.update({
+        where: { id: meeting.id },
+        data: {
+          status: "FINALIZED",
+          resultsVisible: true, // finalization always makes results visible
+          revealedAt: meeting.revealedAt ?? new Date(),
+          finalBookOptionId: book.id,
+          meetingDate: winningDate.date,
+          // Frozen copy of the final ranking for the archive
+          finalResultsSnapshot: JSON.stringify({
+            totalBallots: books.totalBallots,
+            ranking: books.results.map((b) => ({
+              bookOptionId: b.id,
+              title: b.title,
+              author: b.author,
+              bordaPoints: b.bordaPoints,
+            })),
+          }),
+        },
+        include: meetingIncludes(),
+      });
+      return { status: 200, meeting: updated };
     },
-    include: meetingIncludes(),
-  });
-  return res.json(updated);
+    { isolationLevel: "Serializable" },
+  );
+
+  if ("error" in outcome) {
+    return res.status(outcome.status).json({ error: outcome.error });
+  }
+  return res.json(outcome.meeting);
+}
+
+/**
+ * The winner is the sole leader; with a tie, the host's tie-break choice,
+ * which must be one of the tied options.
+ */
+function pickWinner(
+  leaderIds: number[],
+  tieBreakId: number | undefined,
+): { id: number } | { error: string } {
+  if (leaderIds.length === 0) return { error: "there are no options" };
+  if (leaderIds.length === 1) {
+    if (tieBreakId !== undefined && tieBreakId !== leaderIds[0]) {
+      return { error: "there's no tie to break" };
+    }
+    return { id: leaderIds[0] };
+  }
+  if (tieBreakId === undefined) {
+    return { error: "there's a tie — choose one of the tied options" };
+  }
+  if (!leaderIds.includes(tieBreakId)) {
+    return { error: "the tie-break choice must be one of the tied options" };
+  }
+  return { id: tieBreakId };
 }
 
 function meetingIncludes() {

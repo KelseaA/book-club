@@ -98,6 +98,8 @@ export interface BookResultsResponse {
   meetingId: number;
   totalBallots: number;
   results: BookResult[];
+  /** Every book tied for first — more than one means the host must pick */
+  leaderIds: number[];
 }
 
 export interface DateResultEntry {
@@ -110,6 +112,8 @@ export interface DateResultEntry {
 export interface DateResultsResponse {
   meetingId: number;
   results: DateResultEntry[];
+  /** Every date tied for most available — more than one means the host must pick */
+  leaderIds: number[];
 }
 
 export interface BookMetadata {
